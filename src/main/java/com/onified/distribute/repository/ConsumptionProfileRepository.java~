@@ -1,0 +1,48 @@
+package com.onified.distribute.repository;
+
+import com.onified.distribute.entity.ConsumptionProfile;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.mongodb.repository.MongoRepository;
+import org.springframework.data.mongodb.repository.Query;
+import org.springframework.stereotype.Repository;
+
+import java.util.Optional;
+
+@Repository
+public interface ConsumptionProfileRepository extends MongoRepository<ConsumptionProfile, String> {
+
+    // Find by Product and Location (unique combination)
+    Optional<ConsumptionProfile> findByProductIdAndLocationId(String productId, String locationId);
+
+    // Find by Product ID
+    Page<ConsumptionProfile> findByProductId(String productId, Pageable pageable);
+
+    // Find by Location ID
+    Page<ConsumptionProfile> findByLocationId(String locationId, Pageable pageable);
+
+    // Find by ADC Trend
+    Page<ConsumptionProfile> findByAdcTrend(String adcTrend, Pageable pageable);
+
+    // Find by Seasonality Factor Range
+    @Query("{'seasonalityFactor': {$gte: ?0, $lte: ?1}}")
+    Page<ConsumptionProfile> findBySeasonalityFactorBetween(Double minFactor, Double maxFactor, Pageable pageable);
+
+    // Find by Average Daily Consumption Range
+    @Query("{'averageDailyConsumption': {$gte: ?0, $lte: ?1}}")
+    Page<ConsumptionProfile> findByAverageDailyConsumptionBetween(Double minAdc, Double maxAdc, Pageable pageable);
+
+    // Find by Variability Factor Range
+    @Query("{'variabilityFactor': {$gte: ?0, $lte: ?1}}")
+    Page<ConsumptionProfile> findByVariabilityFactorBetween(Double minVariability, Double maxVariability, Pageable pageable);
+
+    // Check if profile exists for product and location
+    boolean existsByProductIdAndLocationId(String productId, String locationId);
+
+    // Delete by Product and Location
+    void deleteByProductIdAndLocationId(String productId, String locationId);
+
+    // Find profiles that need recalculation
+    @Query("{'lastCalculatedAt': {$lt: ?0}}")
+    Page<ConsumptionProfile> findProfilesNeedingRecalculation(java.time.LocalDateTime cutoffDate, Pageable pageable);
+}

@@ -1,0 +1,26 @@
+spring:
+  application:
+    name: pull-distribution-system
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/pull_distribution_db
+      database: pull_distribution_db
+      auto-index-creation: true
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+
+server:
+  port: 8080
+
+logging:
+  level:
+    org.springframework: INFO
+    com.onified.distribute: DEBUG
+
+# Minimal Swagger Configuration
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true

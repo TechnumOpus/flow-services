@@ -1,0 +1,60 @@
+package com.onified.distribute.repository;
+
+import com.onified.distribute.entity.IntegrationConfig;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.mongodb.repository.MongoRepository;
+import org.springframework.data.mongodb.repository.Query;
+import org.springframework.stereotype.Repository;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
+
+@Repository
+public interface IntegrationConfigRepository extends MongoRepository<IntegrationConfig, String> {
+
+    // Find by System Name and Integration Type
+    Page<IntegrationConfig> findBySystemNameAndIntegrationType(String systemName, String integrationType, Pageable pageable);
+
+    // Find by System Name
+    Page<IntegrationConfig> findBySystemName(String systemName, Pageable pageable);
+
+    // Find by Integration Type
+    Page<IntegrationConfig> findByIntegrationType(String integrationType, Pageable pageable);
+
+    // Find by Sync Status
+    Page<IntegrationConfig> findBySyncStatus(String syncStatus, Pageable pageable);
+
+    // Find Active Configurations
+    @Query("{'isActive': true}")
+    Page<IntegrationConfig> findActiveConfigs(Pageable pageable);
+
+    // Find by Last Sync Date Range
+    Page<IntegrationConfig> findByLastSyncAtBetween(LocalDateTime startDate, LocalDateTime endDate, Pageable pageable);
+
+    // Find configurations that need sync
+    @Query("{'nextSyncAt': {$lte: ?0}, 'isActive': true}")
+    List<IntegrationConfig> findConfigsDueForSync(LocalDateTime currentTime);
+
+    // Find by Sync Frequency
+    Page<IntegrationConfig> findBySyncFrequency(String syncFrequency, Pageable pageable);
+
+    // Find failed syncs
+    @Query("{'syncStatus': 'FAILED', 'isActive': true}")
+    Page<IntegrationConfig> findFailedSyncs(Pageable pageable);
+
+    // Find by unique system and type combination
+    Optional<IntegrationConfig> findBySystemNameAndIntegrationTypeAndIsActiveTrue(String systemName, String integrationType);
+
+    // Check if config exists
+    boolean existsBySystemNameAndIntegrationType(String systemName, String integrationType);
+
+    // Find configurations by endpoint URL
+    Page<IntegrationConfig> findByEndpointUrlContainingIgnoreCase(String endpointUrl, Pageable pageable);
+
+    IntegrationConfig findByConfigId(String configId);
+
+    Page<IntegrationConfig> findByIsActiveTrue(Pageable pageable);
+
+}

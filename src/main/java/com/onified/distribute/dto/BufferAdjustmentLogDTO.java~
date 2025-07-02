@@ -1,0 +1,31 @@
+package com.onified.distribute.dto;
+
+import lombok.Data;
+import java.time.LocalDateTime;
+
+@Data
+public class BufferAdjustmentLogDTO {
+    private String id;
+    private String logId;
+    private String bufferId;
+    private String productId;
+    private String locationId;
+    private String adjustmentType;
+    private Integer oldBufferDays;
+    private Integer newBufferDays;
+    private Integer oldBufferUnits;
+    private Integer newBufferUnits;
+    private Double changePercentage;
+    private String triggerReason;
+    private Integer consecutiveDaysInZone;
+    private String zoneWhenTriggered;
+    private Double adcAtAdjustment;
+    private Boolean systemRecommended;
+    private Boolean requiresApproval;
+    private String approvalStatus;
+    private String approvedBy;
+    private LocalDateTime approvalDate;
+    private LocalDateTime adjustmentDate;
+    private String createdBy;
+    private String comments;
+}

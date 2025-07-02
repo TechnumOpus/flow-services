@@ -1,0 +1,45 @@
+package com.onified.distribute.service;
+
+import com.onified.distribute.dto.InventoryBufferDTO;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
+import java.time.LocalDateTime;
+import java.util.List;
+
+public interface InventoryBufferService {
+
+
+    InventoryBufferDTO calculateAndCreateBuffer(String productId, String locationId, Double safetyFactor);
+    InventoryBufferDTO createInventoryBuffer(InventoryBufferDTO bufferDto);
+    
+    InventoryBufferDTO updateInventoryBuffer(String bufferId, InventoryBufferDTO bufferDto);
+    
+    InventoryBufferDTO getInventoryBufferById(String bufferId);
+    
+    InventoryBufferDTO getInventoryBufferByProductAndLocation(String productId, String locationId);
+    
+    Page<InventoryBufferDTO> getAllInventoryBuffers(Pageable pageable);
+    
+    Page<InventoryBufferDTO> getInventoryBuffersByProduct(String productId, Pageable pageable);
+    
+    Page<InventoryBufferDTO> getInventoryBuffersByLocation(String locationId, Pageable pageable);
+    
+    Page<InventoryBufferDTO> getInventoryBuffersByCurrentZone(String currentZone, Pageable pageable);
+    
+    Page<InventoryBufferDTO> getActiveInventoryBuffers(Pageable pageable);
+    
+    Page<InventoryBufferDTO> getBuffersDueForReview(LocalDateTime currentDate, Pageable pageable);
+    
+    InventoryBufferDTO initializeBuffer(String productId, String locationId, Double safetyFactor);
+    
+    InventoryBufferDTO calculateBufferZone(String bufferId);
+    
+    InventoryBufferDTO updateBufferInventory(String bufferId, Integer currentInventory, Integer inPipelineQty);
+    
+    List<InventoryBufferDTO> getBuffersInZones(List<String> zones);
+    
+    void deleteInventoryBuffer(String bufferId);
+    
+    boolean existsByProductAndLocation(String productId, String locationId);
+}
