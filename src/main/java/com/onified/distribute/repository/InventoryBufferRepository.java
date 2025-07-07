@@ -14,6 +14,13 @@ import java.util.Optional;
 @Repository
 public interface InventoryBufferRepository extends MongoRepository<InventoryBuffer, String> {
 
+    // New method for category filtering
+    @Query("{'product_id': {$in: ?0}, 'is_active': true}")
+    Page<InventoryBuffer> findByProductIdIn(List<String> productIds, Pageable pageable);
+
+    @Query("{'product_id': {$in: ?0}, 'current_zone': ?1, 'is_active': true}")
+    Page<InventoryBuffer> findByProductIdInAndCurrentZone(List<String> productIds, String currentZone, Pageable pageable);
+
     // These Spring Data methods will work automatically now
     Optional<InventoryBuffer> findByProductIdAndLocationId(String productId, String locationId);
     Page<InventoryBuffer> findByProductId(String productId, Pageable pageable);

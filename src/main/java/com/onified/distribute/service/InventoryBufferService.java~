@@ -18,6 +18,8 @@ public interface InventoryBufferService {
     Page<InventoryBufferDTO> getInventoryBuffersByCurrentZone(String currentZone, Pageable pageable);
     Page<InventoryBufferDTO> getActiveInventoryBuffers(Pageable pageable);
     Page<InventoryBufferDTO> getBuffersDueForReview(LocalDateTime currentDate, Pageable pageable);
+    InventoryBufferDTO calculateAndCreateBuffer(String productId, String locationId, Double safetyFactor);
+    InventoryBufferDTO initializeBuffer(String productId, String locationId, Double safetyFactor);
     InventoryBufferDTO calculateBufferZone(String bufferId);
     InventoryBufferDTO updateBufferInventory(String bufferId, Integer currentInventory, Integer inPipelineQty);
     List<InventoryBufferDTO> getBuffersInZones(List<String> zones);

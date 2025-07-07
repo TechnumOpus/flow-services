@@ -7,7 +7,6 @@ import org.springframework.data.domain.Pageable;
 import java.util.List;
 
 public interface ProductService {
-    List<String> getProductIdsByCategory(String category);
     ProductDTO createProduct(ProductDTO productDto);
     ProductDTO updateProduct(String productId, ProductDTO productDto);
     ProductDTO getProductById(String productId);

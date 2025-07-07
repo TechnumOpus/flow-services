@@ -20,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -32,6 +33,7 @@ public class ConsumptionProfileServiceImpl implements ConsumptionProfileService 
     private final InventoryBufferService inventoryBufferService;
     private final ProductService productService;
 
+    // Existing methods (unchanged)
     @Override
     public ConsumptionProfileDTO createConsumptionProfile(ConsumptionProfileDTO profileDto) {
         log.info("Creating consumption profile for product: {} at location: {}",
@@ -202,11 +204,13 @@ public class ConsumptionProfileServiceImpl implements ConsumptionProfileService 
 
         BufferConsumptionResponseDTO response = new BufferConsumptionResponseDTO();
 
+        // Step 1: Get product IDs by category (if provided)
         List<String> productIds = productId != null ? List.of(productId) : null;
         if (category != null && productId == null) {
             productIds = productService.getProductIdsByCategory(category);
         }
 
+        // Step 2: Fetch inventory buffers with filters
         Page<InventoryBufferDTO> inventoryBuffers;
         if (bufferZone != null) {
             inventoryBuffers = productIds != null ?
@@ -221,6 +225,7 @@ public class ConsumptionProfileServiceImpl implements ConsumptionProfileService 
         }
         response.setInventoryBuffers(inventoryBuffers.getContent());
 
+        // Step 3: Fetch consumption profiles with filters
         Page<ConsumptionProfileDTO> consumptionProfiles;
         if (productIds != null) {
             consumptionProfiles = consumptionProfileRepository.findByProductIdIn(productIds, Pageable.unpaged()).map(this::convertToDto);
@@ -231,6 +236,7 @@ public class ConsumptionProfileServiceImpl implements ConsumptionProfileService 
         }
         response.setConsumptionProfiles(consumptionProfiles.getContent());
 
+        // Step 4: Fetch daily consumption logs with filters
         Page<DailyConsumptionLogDTO> dailyConsumptionLogs;
         if (productIds != null && locationId != null) {
             dailyConsumptionLogs = dailyConsumptionLogService.getDailyConsumptionLogsByProductAndLocation(productIds.get(0), locationId, pageable);

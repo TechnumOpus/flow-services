@@ -30,7 +30,7 @@ public class ProductServiceImpl implements ProductService {
         log.info("Fetching product IDs for category: {}", category);
         return productRepository.findProductIdsByCategory(category)
                 .stream()
-                .map(Product::getProductId)
+                .map(product -> product.getProductId())
                 .collect(Collectors.toList());
     }
 

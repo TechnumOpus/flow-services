@@ -8,9 +8,14 @@ import org.springframework.data.mongodb.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
+import java.util.List;
 
 @Repository
 public interface ConsumptionProfileRepository extends MongoRepository<ConsumptionProfile, String> {
+
+    // New method for category filtering
+    @Query("{'productId': {$in: ?0}}")
+    Page<ConsumptionProfile> findByProductIdIn(List<String> productIds, Pageable pageable);
 
     // Find by Product and Location (unique combination)
     Optional<ConsumptionProfile> findByProductIdAndLocationId(String productId, String locationId);

@@ -15,16 +15,15 @@ public class ReplenishmentQueueScheduler {
 
     private final ReplenishmentQueueService replenishmentQueueService;
 
-    // Run daily at 6:00 AM
-    @Scheduled(cron = "0 0 6 * * ?")
+    // Run hourly
+    @Scheduled(cron = "0 0 * * * ?")
     public void generateDailyReplenishmentQueue() {
-        log.info("Starting scheduled daily replenishment queue generation");
-
+        log.info("Starting scheduled hourly replenishment queue generation");
         try {
             replenishmentQueueService.generateDailyReplenishmentQueue();
-            log.info("Scheduled daily replenishment queue generation completed successfully");
+            log.info("Scheduled hourly replenishment queue generation completed successfully");
         } catch (Exception e) {
-            log.error("Error in scheduled daily replenishment queue generation", e);
+            log.error("Error in scheduled hourly replenishment queue generation", e);
         }
     }
 }

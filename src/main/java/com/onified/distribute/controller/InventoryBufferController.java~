@@ -146,7 +146,7 @@ public class InventoryBufferController {
 //        }
 //    }
 
-    @PutMapping("/calculate-zone/{bufferId}")
+    @PutMapping("calculate-zone/{bufferId}")
     public ResponseEntity<InventoryBufferDTO> calculateBufferZone(@PathVariable String bufferId) {
         log.info("Calculating buffer zone for buffer: {}", bufferId);
 
@@ -154,7 +154,7 @@ public class InventoryBufferController {
         return ResponseEntity.ok(buffer);
     }
 
-    @PutMapping("/inventory/{bufferId}")
+    @PutMapping("/{bufferId}/inventory")
     public ResponseEntity<InventoryBufferDTO> updateBufferInventory(
             @PathVariable String bufferId,
             @RequestParam Integer currentInventory,

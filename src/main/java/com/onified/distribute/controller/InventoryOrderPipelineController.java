@@ -1,57 +1,87 @@
 package com.onified.distribute.controller;
 
+import com.onified.distribute.dto.CreateOrdersRequestDTO;
 import com.onified.distribute.dto.InventoryOrderPipelineDTO;
 import com.onified.distribute.service.InventoryOrderPipelineService;
-import com.onified.distribute.service.ReplenishmentQueueService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
 
-import java.time.LocalDateTime;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @RestController
-@RequestMapping("/api/v1/inventory-orders")
+@RequestMapping("/api/v1/orders")
 @RequiredArgsConstructor
 public class InventoryOrderPipelineController {
 
-    private final InventoryOrderPipelineService inventoryOrderPipelineService;
-    private final ReplenishmentQueueService replenishmentQueueService;
-    @PutMapping("/{orderId}/receipt")
-    public ResponseEntity<InventoryOrderPipelineDTO> updateOrderReceipt(
-            @PathVariable String orderId,
-            @RequestParam Integer receivedQty,
-            @RequestParam(required = false) LocalDateTime actualReceiptDate) {
-        log.info("Updating receipt for order: {}", orderId);
-        InventoryOrderPipelineDTO updatedOrder = inventoryOrderPipelineService.updateOrderReceipt(orderId, receivedQty,
-                actualReceiptDate);
-        return ResponseEntity.ok(updatedOrder);
-    }
-    @GetMapping("/in-transit/{locationId}")
-    public ResponseEntity<Page<InventoryOrderPipelineDTO>> getInTransitOrders(
-            @PathVariable String locationId, Pageable pageable) {
-        log.info("Fetching in-transit orders for location: {}", locationId);
-        Page<InventoryOrderPipelineDTO> orders = replenishmentQueueService.getInTransitOrders(locationId, pageable);
+    private final InventoryOrderPipelineService orderService;
+
+    @GetMapping("/pending")
+    public ResponseEntity<Page<InventoryOrderPipelineDTO>> getPendingOrders(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "orderId,asc") String sort,
+            @RequestParam(required = false) String locationId) {
+        log.info("Fetching pending orders - page: {}, size: {}, sort: {}, locationId: {}", page, size, sort, locationId);
+        String[] sortParams = sort.split(",");
+        Sort.Direction direction = Sort.Direction.fromString(sortParams[1]);
+        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortParams[0]));
+        Page<InventoryOrderPipelineDTO> orders = orderService.getPendingOrders(locationId, pageable);
         return ResponseEntity.ok(orders);
     }
 
-    @DeleteMapping("/orders/{orderId}")
-    public ResponseEntity<Void> cancelOrder(@PathVariable String orderId) {
-        log.info("Canceling order: {}", orderId);
-        replenishmentQueueService.cancelOrder(orderId);
-        return ResponseEntity.ok().build();
+    @PostMapping("/approve-all")
+    public ResponseEntity<Map<String, Object>> approveSelectedOrders(@RequestBody List<String> orderIds) {
+        log.info("Approving selected orders: {}", orderIds);
+        if (orderIds == null || orderIds.isEmpty()) {
+            return ResponseEntity.badRequest().body(Collections.singletonMap("error", "Order IDs must be provided"));
+        }
+        orderService.approveSelectedOrders(orderIds, "SYSTEM"); // Default userId
+        Map<String, Object> response = new HashMap<>();
+        response.put("message", "Successfully approved orders: " + orderIds);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/active")
+    public ResponseEntity<Page<InventoryOrderPipelineDTO>> getActiveOrders(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "orderId,asc") String sort,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String locationId) {
+        log.info("Fetching active orders - page: {}, size: {}, sort: {}, status: {}, locationId: {}",
+                page, size, sort, status, locationId);
+        String[] sortParams = sort.split(",");
+        Sort.Direction direction = Sort.Direction.fromString(sortParams[1]);
+        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortParams[0]));
+        Page<InventoryOrderPipelineDTO> orders = orderService.getActiveOrders(status, locationId, pageable);
+        return ResponseEntity.ok(orders);
+    }
+
+    @PostMapping("/bulk")
+    public ResponseEntity<Void> createBulkOrders(@Valid @RequestBody CreateOrdersRequestDTO requestDTO) {
+        log.info("Creating bulk orders for {} queue items", requestDTO.getQueueItems().size());
+        String userId = "SYSTEM"; // Default userId since authentication is removed
+        orderService.createBulkOrders(requestDTO, userId);
+        return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
     @PostMapping
     public ResponseEntity<InventoryOrderPipelineDTO> createOrder(@Valid @RequestBody InventoryOrderPipelineDTO orderDTO) {
-        log.info("Creating inventory order with ID: {}", orderDTO.getOrderId());
-        InventoryOrderPipelineDTO createdOrder = inventoryOrderPipelineService.createOrder(orderDTO);
+        log.info("Creating order with ID: {}", orderDTO.getOrderId());
+        InventoryOrderPipelineDTO createdOrder = orderService.createOrder(orderDTO);
         return new ResponseEntity<>(createdOrder, HttpStatus.CREATED);
     }
 
@@ -59,32 +89,34 @@ public class InventoryOrderPipelineController {
     public ResponseEntity<InventoryOrderPipelineDTO> updateOrder(
             @PathVariable String orderId,
             @Valid @RequestBody InventoryOrderPipelineDTO orderDTO) {
-        log.info("Updating inventory order: {}", orderId);
-        InventoryOrderPipelineDTO updatedOrder = inventoryOrderPipelineService.updateOrder(orderId, orderDTO);
+        log.info("Updating order: {}", orderId);
+        InventoryOrderPipelineDTO updatedOrder = orderService.updateOrder(orderId, orderDTO);
         return ResponseEntity.ok(updatedOrder);
     }
 
     @GetMapping("/{orderId}")
     public ResponseEntity<InventoryOrderPipelineDTO> getOrderById(@PathVariable String orderId) {
-        log.info("Fetching inventory order: {}", orderId);
-        InventoryOrderPipelineDTO order = inventoryOrderPipelineService.getOrderById(orderId);
+        log.info("Fetching order: {}", orderId);
+        InventoryOrderPipelineDTO order = orderService.getOrderById(orderId);
         return ResponseEntity.ok(order);
     }
 
-    @GetMapping
+    @GetMapping("/by-status-and-location")
     public ResponseEntity<Page<InventoryOrderPipelineDTO>> getOrdersByStatusAndLocation(
             @RequestParam String status,
             @RequestParam String locationId,
-            Pageable pageable) {
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
         log.info("Fetching orders by status: {} and location: {}", status, locationId);
-        Page<InventoryOrderPipelineDTO> orders = inventoryOrderPipelineService.getOrdersByStatusAndLocation(status, locationId, pageable);
+        Pageable pageable = PageRequest.of(page, size);
+        Page<InventoryOrderPipelineDTO> orders = orderService.getOrdersByStatusAndLocation(status, locationId, pageable);
         return ResponseEntity.ok(orders);
     }
 
     @DeleteMapping("/{orderId}")
     public ResponseEntity<Void> deleteOrder(@PathVariable String orderId) {
-        log.info("Deleting inventory order: {}", orderId);
-        inventoryOrderPipelineService.deleteOrder(orderId);
+        log.info("Deleting order: {}", orderId);
+        orderService.deleteOrder(orderId);
         return ResponseEntity.noContent().build();
     }
 }

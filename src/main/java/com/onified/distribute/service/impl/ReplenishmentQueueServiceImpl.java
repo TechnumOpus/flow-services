@@ -38,18 +38,15 @@ public class ReplenishmentQueueServiceImpl implements ReplenishmentQueueService 
     private final LocationRepository locationRepository;
     private final InventoryOrderPipelineRepository inventoryOrderPipelineRepository;
 
-
     @Override
     public void processReplenishmentQueue() {
         log.info("Processing replenishment queue for pending items");
 
-        // Query pending queue items, sorted by priorityScore DESC
         Pageable pageable = PageRequest.of(0, 100, Sort.by(Sort.Direction.DESC, "priorityScore"));
         Page<ReplenishmentQueue> pendingItems = queueRepository.findByStatusAndIsActiveTrue("pending", pageable);
 
         for (ReplenishmentQueue queueItem : pendingItems.getContent()) {
             try {
-                // Skip non-order actions
                 if (!"order".equalsIgnoreCase(queueItem.getRecommendedAction()) &&
                         !"expedite".equalsIgnoreCase(queueItem.getRecommendedAction())) {
                     log.debug("Skipping queue item {}: recommended action is {}",
@@ -57,32 +54,27 @@ public class ReplenishmentQueueServiceImpl implements ReplenishmentQueueService 
                     continue;
                 }
 
-                // Fetch buffer for validation
                 InventoryBuffer buffer = bufferRepository.findByProductIdAndLocationId(
                                 queueItem.getProductId(), queueItem.getLocationId())
                         .orElseThrow(() -> new ResourceNotFoundException(
                                 "Buffer not found for product: " + queueItem.getProductId() +
                                         ", location: " + queueItem.getLocationId()));
 
-                // Fetch location to get supplier ID
                 Location location = locationRepository.findByLocationId(queueItem.getLocationId())
                         .orElseThrow(() -> new ResourceNotFoundException(
                                 "Location not found: " + queueItem.getLocationId()));
                 String supplierLocationId = location.getParentLocationId();
                 if (supplierLocationId == null) {
-                    log.warn("No parentLocationId found for location: {}", queueItem.getLocationId());
                     throw new BadRequestException("Supplier not defined for location: " + queueItem.getLocationId());
                 }
 
-                // Create order in inventory_orders_pipeline
                 InventoryOrderPipelineDTO orderDTO = new InventoryOrderPipelineDTO();
-                String orderId = "ORD-" + UUID.randomUUID().toString();
+                String orderId = "ORD-" + UUID.randomUUID();
                 orderDTO.setOrderId(orderId);
                 orderDTO.setProductId(queueItem.getProductId());
                 orderDTO.setLocationId(queueItem.getLocationId());
                 orderDTO.setSupplierLocationId(supplierLocationId);
-                orderDTO.setOrderType(queueItem.getRecommendedAction().equalsIgnoreCase("expedite") ?
-                        "EXPEDITE" : "STANDARD");
+                orderDTO.setOrderType(queueItem.getRecommendedAction().equalsIgnoreCase("expedite") ? "EXPEDITE" : "STANDARD");
                 orderDTO.setOrderedQty(calculateOrderedQty(queueItem, buffer));
                 orderDTO.setReceivedQty(0);
                 orderDTO.setPendingQty(orderDTO.getOrderedQty());
@@ -91,7 +83,7 @@ public class ReplenishmentQueueServiceImpl implements ReplenishmentQueueService 
                         queueItem.getLeadTimeDays() != null
                                 ? LocalDateTime.now().plusDays(queueItem.getLeadTimeDays().longValue())
                                 : LocalDateTime.now().plusDays(7));
-                orderDTO.setStatus("PENDING");
+                orderDTO.setStatus("DRAFT");
                 orderDTO.setPriority(calculatePriority(queueItem, buffer));
                 orderDTO.setCreatedAt(LocalDateTime.now());
                 orderDTO.setUpdatedAt(LocalDateTime.now());
@@ -99,11 +91,9 @@ public class ReplenishmentQueueServiceImpl implements ReplenishmentQueueService 
                 orderDTO.setLastStatusChange(LocalDateTime.now());
                 orderDTO.setLastStatusChangeBy("SYSTEM");
 
-                // Create order
                 InventoryOrderPipelineDTO createdOrder = inventoryOrderPipelineService.createOrder(orderDTO);
                 log.info("Created order {} for queue item {}", orderId, queueItem.getQueueId());
 
-                // Update inventory_buffer in_pipeline_qty
                 Integer newInPipelineQty = buffer.getInPipelineQty() + orderDTO.getOrderedQty();
                 InventoryBufferDTO bufferDTO = inventoryBufferService.getInventoryBufferById(buffer.getId());
                 bufferDTO.setInPipelineQty(newInPipelineQty);
@@ -111,235 +101,86 @@ public class ReplenishmentQueueServiceImpl implements ReplenishmentQueueService 
                 log.info("Updated in_pipeline_qty for buffer {}: {} -> {}",
                         buffer.getBufferId(), buffer.getInPipelineQty(), newInPipelineQty);
 
-                // Update queue item
                 queueItem.setStatus("processed");
                 queueItem.setActionTaken(queueItem.getRecommendedAction());
                 queueItem.setOrderId(orderId);
                 queueItem.setProcessedAt(LocalDateTime.now());
                 queueItem.setProcessedBy("SYSTEM");
                 queueRepository.save(queueItem);
-                log.info("Updated queue item {} to processed with order {}",
-                        queueItem.getQueueId(), orderId);
+                log.info("Updated queue item {} to processed with order {}", queueItem.getQueueId(), orderId);
 
             } catch (Exception e) {
                 log.error("Error processing queue item {}: {}", queueItem.getQueueId(), e.getMessage(), e);
             }
         }
 
-        log.info("Replenishment queue processing completed. Processed {} items",
-                pendingItems.getNumberOfElements());
+        log.info("Replenishment queue processing completed. Processed {} items", pendingItems.getNumberOfElements());
     }
 
     @Override
     public void generateDailyReplenishmentQueue() {
-        log.info("Starting daily replenishment queue generation");
+        log.info("Starting hourly replenishment queue generation");
 
         try {
-            Pageable pageable = Pageable.ofSize(1000);
-            Page<InventoryBuffer> activeBuffersPage;
+            validateRepositories();
+            int pageSize = 1000;
+            int pageNumber = 0;
             int processedCount = 0;
             int createdCount = 0;
+            int errorCount = 0;
 
-            do {
-                activeBuffersPage = bufferRepository.findActiveBuffers(pageable);
+            while (true) {
+                Pageable pageable = PageRequest.of(pageNumber, pageSize);
+                Page<InventoryBuffer> activeBuffersPage = bufferRepository.findActiveBuffers(pageable);
+
+                if (activeBuffersPage.isEmpty()) {
+                    log.info("No more active buffers to process. Breaking pagination loop.");
+                    break;
+                }
+
+                log.debug("Processing page {} with {} buffers", pageNumber, activeBuffersPage.getNumberOfElements());
 
                 for (InventoryBuffer buffer : activeBuffersPage.getContent()) {
                     try {
+                        if (buffer == null || buffer.getProductId() == null || buffer.getLocationId() == null) {
+                            log.warn("Buffer {} has null productId or locationId, skipping", buffer != null ? buffer.getBufferId() : "null");
+                            continue;
+                        }
+
                         ReplenishmentQueue queueItem = processBuffer(buffer);
                         if (queueItem != null) {
                             queueRepository.save(queueItem);
                             createdCount++;
                             log.debug("Created queue item for buffer: {}", buffer.getBufferId());
+                        } else {
+                            log.debug("No queue item created for buffer: {} (likely missing dependencies)", buffer.getBufferId());
                         }
                         processedCount++;
-                    } catch (Exception e) {
-                        log.error("Error processing buffer: {} - {}", buffer.getBufferId(), e.getMessage(), e);
+                    } catch (Exception bufferException) {
+                        log.error("Error processing buffer: {} - {}", buffer != null ? buffer.getBufferId() : "null", bufferException.getMessage(), bufferException);
+                        errorCount++;
+                        processedCount++;
                     }
                 }
 
-                pageable = activeBuffersPage.nextPageable();
-            } while (activeBuffersPage.hasNext());
+                if (!activeBuffersPage.hasNext()) {
+                    break;
+                }
+                pageNumber++;
+            }
 
-            log.info("Daily replenishment queue generation completed. Processed: {}, Created: {}",
-                    processedCount, createdCount);
+            log.info("Hourly replenishment queue generation completed. Processed: {}, Created: {}, Errors: {}", processedCount, createdCount, errorCount);
 
         } catch (Exception e) {
-            log.error("Error during daily replenishment queue generation", e);
-            throw new RuntimeException("Failed to generate daily replenishment queue", e);
+            log.error("Critical error during hourly replenishment queue generation: {}", e.getMessage(), e);
+            throw new RuntimeException("Failed to generate hourly replenishment queue: " + e.getMessage(), e);
         }
     }
 
-    private Integer calculateOrderedQty(ReplenishmentQueue queueItem, InventoryBuffer buffer) {
-        Integer bufferUnits = buffer.getBufferUnits();
-        Integer currentInventory = buffer.getCurrentInventory();
-        if (bufferUnits == null || currentInventory == null) {
-            log.warn("Invalid buffer data for {}: bufferUnits={}, currentInventory={}",
-                    queueItem.getQueueId(), bufferUnits, currentInventory);
-            return 0;
-        }
-        Integer orderedQty = Math.max(0, bufferUnits - currentInventory);
-        log.debug("Calculated ordered_qty for queue item {}: {} (bufferUnits={} - currentInventory={})",
-                queueItem.getQueueId(), orderedQty, bufferUnits, currentInventory);
-        return orderedQty;
-    }
-
-    private String calculatePriority(ReplenishmentQueue queueItem, InventoryBuffer buffer) {
-        // Zone weight
-        double zoneWeight = switch (buffer.getCurrentZone().toLowerCase()) {
-            case "red", "critical" -> 100.0;
-            case "yellow" -> 50.0;
-            case "green" -> 10.0;
-            default -> 10.0;
-        };
-
-        // Order frequency (count of orders in last 30 days)
-        LocalDateTime thirtyDaysAgo = LocalDateTime.now().minusDays(30);
-        long orderCount = inventoryOrderPipelineRepository
-                .findByLocationId(queueItem.getLocationId(), Pageable.unpaged())
-                .getContent().stream()
-                .filter(order -> order.getOrderDate() != null &&
-                        order.getOrderDate().isAfter(thirtyDaysAgo))
-                .count();
-        double frequencyWeight = orderCount * 5.0; // Scale frequency (5 points per order)
-
-        // Combine weights (adjust formula as needed)
-        double priorityScore = zoneWeight + frequencyWeight;
-        String priority = switch ((int) (priorityScore / 50)) {
-            case 0 -> "LOW";
-            case 1 -> "MEDIUM";
-            case 2 -> "HIGH";
-            default -> "CRITICAL";
-        };
-
-        log.debug("Calculated priority for queue item {}: zoneWeight={}, frequencyWeight={}, priority={}",
-                queueItem.getQueueId(), zoneWeight, frequencyWeight, priority);
-        return priority;
-    }
-
-    private ReplenishmentQueue processBuffer(InventoryBuffer buffer) {
-        log.debug("Processing buffer: {} for Product: {}, Location: {}",
-                buffer.getBufferId(), buffer.getProductId(), buffer.getLocationId());
-
-        ConsumptionProfile consumptionProfile = consumptionProfileRepository
-                .findByProductIdAndLocationId(buffer.getProductId(), buffer.getLocationId())
-                .orElse(null);
-        LeadTime leadTime = leadTimeRepository
-                .findByProductIdAndLocationIdAndIsActive(buffer.getProductId(), buffer.getLocationId(), true)
-                .orElse(null);
-        Product product = productRepository
-                .findByProductId(buffer.getProductId())
-                .orElse(null);
-
-        if (consumptionProfile == null || leadTime == null || product == null) {
-            log.warn("Missing data for buffer: {} (Product: {}, Location: {}) - CP: {}, LT: {}, P: {}",
-                    buffer.getBufferId(), buffer.getProductId(), buffer.getLocationId(),
-                    consumptionProfile != null, leadTime != null, product != null);
-            return null;
-        }
-
-        Integer bufferDeficit = calculateBufferDeficit(buffer);
-        Double daysOfSupply = calculateDaysOfSupply(buffer, consumptionProfile);
-        String recommendedAction = determineRecommendedAction(buffer, daysOfSupply, leadTime);
-        Integer recommendedQty = calculateRecommendedQty(bufferDeficit, product.getMoq(), recommendedAction);
-        Double priorityScore = calculatePriorityScore(buffer, bufferDeficit);
-        List<String> reasonCodes = generateReasonCodes(buffer, daysOfSupply, leadTime);
-
-        ReplenishmentQueue queueItem = new ReplenishmentQueue();
-        queueItem.setQueueId(generateQueueId(buffer));
-        queueItem.setProductId(buffer.getProductId());
-        queueItem.setLocationId(buffer.getLocationId());
-        queueItem.setCurrentInventory(buffer.getCurrentInventory());
-        queueItem.setInPipelineQty(buffer.getInPipelineQty());
-        queueItem.setNetAvailableQty(buffer.getNetAvailableQty());
-        queueItem.setBufferUnits(buffer.getBufferUnits());
-        queueItem.setBufferGap(bufferDeficit);
-        queueItem.setBufferZone(buffer.getCurrentZone());
-        queueItem.setDaysOfSupply(daysOfSupply);
-        queueItem.setRecommendedQty(recommendedQty);
-        queueItem.setRecommendedAction(recommendedAction);
-        queueItem.setPriorityScore(priorityScore);
-        queueItem.setAdcUsed(consumptionProfile.getAdcNormalized());
-        queueItem.setLeadTimeDays(leadTime.getBufferLeadTimeDays());
-        queueItem.setReasonCodes(reasonCodes);
-        queueItem.setQueueDate(LocalDateTime.now());
-        queueItem.setStatus("pending");
-        queueItem.setIsActive(true);
-
-        log.debug("Successfully created queue item for buffer: {}", buffer.getBufferId());
-        return queueItem;
-    }
-
-    private Integer calculateBufferDeficit(InventoryBuffer buffer) {
-        return Math.max(0, buffer.getBufferUnits() - buffer.getNetAvailableQty());
-    }
-
-    private Double calculateDaysOfSupply(InventoryBuffer buffer, ConsumptionProfile consumptionProfile) {
-        Double adcNormalized = consumptionProfile.getAdcNormalized();
-        if (adcNormalized == null || adcNormalized <= 0) {
-            return 0.0;
-        }
-        return buffer.getNetAvailableQty().doubleValue() / adcNormalized;
-    }
-
-    private String determineRecommendedAction(InventoryBuffer buffer, Double daysOfSupply, LeadTime leadTime) {
-        Integer bufferDeficit = calculateBufferDeficit(buffer);
-
-        if (bufferDeficit > 0) {
-            if ("red".equalsIgnoreCase(buffer.getCurrentZone()) &&
-                    daysOfSupply < (leadTime.getBufferLeadTimeDays() / 2.0)) {
-                return "expedite";
-            }
-            return "order";
-        }
-        return "monitor";
-    }
-
-    private Integer calculateRecommendedQty(Integer bufferDeficit, Integer moq, String recommendedAction) {
-        if ("monitor".equals(recommendedAction)) {
-            return 0;
-        }
-        if (bufferDeficit <= 0) {
-            return 0;
-        }
-        return Math.max(moq != null ? moq : 1, bufferDeficit);
-    }
-
-    private Double calculatePriorityScore(InventoryBuffer buffer, Integer bufferDeficit) {
-        double zoneWeight = switch (buffer.getCurrentZone().toLowerCase()) {
-            case "red", "critical" -> 100.0;
-            case "yellow" -> 50.0;
-            case "green" -> 10.0;
-            default -> 10.0;
-        };
-        double bufferPenetration = 0.0;
-        if (buffer.getBufferUnits() > 0) {
-            bufferPenetration = (bufferDeficit.doubleValue() / buffer.getBufferUnits()) * 100;
-        }
-        return zoneWeight + bufferPenetration;
-    }
-
-    private List<String> generateReasonCodes(InventoryBuffer buffer, Double daysOfSupply, LeadTime leadTime) {
-        List<String> reasonCodes = new ArrayList<>();
-        if ("red".equalsIgnoreCase(buffer.getCurrentZone())) {
-            reasonCodes.add("RED_ZONE");
-        } else if ("yellow".equalsIgnoreCase(buffer.getCurrentZone())) {
-            reasonCodes.add("YELLOW_ZONE");
-        }
-        if (daysOfSupply < leadTime.getBufferLeadTimeDays()) {
-            reasonCodes.add("LOW_DAYS_OF_SUPPLY");
-        }
-        Integer bufferDeficit = calculateBufferDeficit(buffer);
-        if (bufferDeficit > 0) {
-            reasonCodes.add("BUFFER_DEFICIT");
-        }
-        if (reasonCodes.isEmpty()) {
-            reasonCodes.add("ROUTINE_REVIEW");
-        }
-        return reasonCodes;
-    }
-
-    private String generateQueueId(InventoryBuffer buffer) {
-        return String.format("QUEUE-%d-%s", System.currentTimeMillis(), buffer.getBufferId());
+    @Override
+    public Page<ReplenishmentQueueDTO> getAllReplenishmentQueues(Pageable pageable) {
+        log.info("Fetching all replenishment queues");
+        return queueRepository.findAll(pageable).map(this::convertToDto);
     }
 
     @Override
@@ -384,19 +225,16 @@ public class ReplenishmentQueueServiceImpl implements ReplenishmentQueueService 
     @Transactional(readOnly = true)
     public Page<ReplenishmentQueueDTO> getQueueItemsByStatus(String status, Pageable pageable) {
         log.info("Fetching queue items by status: {}", status);
-        return queueRepository.findByStatusAndIsActiveTrue(status, pageable)
-                .map(this::convertToDto);
+        return queueRepository.findByStatusAndIsActiveTrue(status, pageable).map(this::convertToDto);
     }
 
     @Override
     @Transactional(readOnly = true)
     public Page<ReplenishmentQueueDTO> getQueueItemsByBufferZoneAndStatus(String bufferZone, String status, Pageable pageable) {
         log.info("Fetching queue items by buffer zone: {} and status: {}", bufferZone, status);
-        return queueRepository.findByBufferZoneAndStatusAndIsActiveTrue(bufferZone, status, pageable)
-                .map(this::convertToDto);
+        return queueRepository.findByBufferZoneAndStatusAndIsActiveTrue(bufferZone, status, pageable).map(this::convertToDto);
     }
 
-    // Monitor in-transit orders
     @Override
     @Transactional(readOnly = true)
     public Page<InventoryOrderPipelineDTO> getInTransitOrders(String locationId, Pageable pageable) {
@@ -423,8 +261,6 @@ public class ReplenishmentQueueServiceImpl implements ReplenishmentQueueService 
                 });
     }
 
-    // Cancel order
-
     @Override
     public void cancelOrder(String orderId) {
         log.info("Canceling order: {}", orderId);
@@ -433,20 +269,16 @@ public class ReplenishmentQueueServiceImpl implements ReplenishmentQueueService 
             throw new ResourceNotFoundException("Order not found with ID: " + orderId);
         }
 
-        // Update inventory_buffer to remove in_pipeline_qty
         InventoryBuffer buffer = bufferRepository.findByProductIdAndLocationId(
                         order.getProductId(), order.getLocationId())
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Buffer not found for product: " + order.getProductId() +
-                                ", location: " + order.getLocationId()));
+                        "Buffer not found for product: " + order.getProductId() + ", location: " + order.getLocationId()));
         Integer newInPipelineQty = Math.max(0, buffer.getInPipelineQty() - order.getOrderedQty());
         InventoryBufferDTO bufferDTO = inventoryBufferService.getInventoryBufferById(buffer.getId());
         bufferDTO.setInPipelineQty(newInPipelineQty);
         inventoryBufferService.updateInventoryBuffer(buffer.getId(), bufferDTO);
-        log.info("Updated in_pipeline_qty for buffer {}: {} -> {}",
-                buffer.getBufferId(), buffer.getInPipelineQty(), newInPipelineQty);
+        log.info("Updated in_pipeline_qty for buffer {}: {} -> {}", buffer.getBufferId(), buffer.getInPipelineQty(), newInPipelineQty);
 
-        // Update replenishment_queue
         ReplenishmentQueue queueItem = queueRepository.findByOrderId(orderId);
         if (queueItem != null) {
             queueItem.setStatus("canceled");
@@ -457,7 +289,6 @@ public class ReplenishmentQueueServiceImpl implements ReplenishmentQueueService 
             log.info("Updated queue item {} to canceled for order {}", queueItem.getQueueId(), orderId);
         }
 
-        // Delete order
         inventoryOrderPipelineRepository.delete(order);
         log.info("Deleted order {} from inventory_orders_pipeline", orderId);
     }
@@ -476,6 +307,7 @@ public class ReplenishmentQueueServiceImpl implements ReplenishmentQueueService 
         dto.setBufferGap(queueItem.getBufferGap());
         dto.setBufferZone(queueItem.getBufferZone());
         dto.setDaysOfSupply(queueItem.getDaysOfSupply());
+        // Note: finalQuantity is not included as per requirements
         dto.setRecommendedQty(queueItem.getRecommendedQty());
         dto.setRecommendedAction(queueItem.getRecommendedAction());
         dto.setPriorityScore(queueItem.getPriorityScore());
@@ -543,5 +375,211 @@ public class ReplenishmentQueueServiceImpl implements ReplenishmentQueueService 
         queueItem.setOrderId(dto.getOrderId());
         queueItem.setStatus(dto.getStatus());
         queueItem.setIsActive(dto.getIsActive());
+    }
+
+    private Integer calculateOrderedQty(ReplenishmentQueue queueItem, InventoryBuffer buffer) {
+        Integer bufferUnits = buffer.getBufferUnits() != null ? buffer.getBufferUnits() : 0;
+        Integer currentInventory = buffer.getCurrentInventory() != null ? buffer.getCurrentInventory() : 0;
+        Integer orderedQty = Math.max(0, bufferUnits - currentInventory);
+        log.debug("Calculated ordered_qty for queue item {}: {} (bufferUnits={} - currentInventory={})",
+                queueItem.getQueueId(), orderedQty, bufferUnits, currentInventory);
+        return orderedQty;
+    }
+
+    private String calculatePriority(ReplenishmentQueue queueItem, InventoryBuffer buffer) {
+        double zoneWeight = switch (buffer.getCurrentZone().toLowerCase()) {
+            case "red", "critical" -> 100.0;
+            case "yellow" -> 50.0;
+            case "green" -> 10.0;
+            default -> 10.0;
+        };
+        LocalDateTime thirtyDaysAgo = LocalDateTime.now().minusDays(30);
+        long orderCount = inventoryOrderPipelineRepository
+                .findByLocationId(queueItem.getLocationId(), Pageable.unpaged())
+                .getContent().stream()
+                .filter(order -> order.getOrderDate() != null && order.getOrderDate().isAfter(thirtyDaysAgo))
+                .count();
+        double frequencyWeight = orderCount * 5.0;
+        double priorityScore = zoneWeight + frequencyWeight;
+        String priority = switch ((int) (priorityScore / 50)) {
+            case 0 -> "LOW";
+            case 1 -> "MEDIUM";
+            case 2 -> "HIGH";
+            default -> "CRITICAL";
+        };
+        log.debug("Calculated priority for queue item {}: zoneWeight={}, frequencyWeight={}, priority={}",
+                queueItem.getQueueId(), zoneWeight, frequencyWeight, priority);
+        return priority;
+    }
+
+    private ReplenishmentQueue processBuffer(InventoryBuffer buffer) {
+        log.debug("Processing buffer: {} for Product: {}, Location: {}", buffer.getBufferId(), buffer.getProductId(), buffer.getLocationId());
+
+        try {
+            if (buffer.getProductId() == null || buffer.getLocationId() == null) {
+                log.warn("Buffer {} has null productId or locationId", buffer.getBufferId());
+                return null;
+            }
+
+            ConsumptionProfile consumptionProfile = consumptionProfileRepository
+                    .findByProductIdAndLocationId(buffer.getProductId(), buffer.getLocationId())
+                    .orElse(null);
+            LeadTime leadTime = leadTimeRepository
+                    .findByProductIdAndLocationIdAndIsActive(buffer.getProductId(), buffer.getLocationId(), true)
+                    .orElse(null);
+            Product product = productRepository
+                    .findByProductId(buffer.getProductId())
+                    .orElse(null);
+
+            if (consumptionProfile == null || leadTime == null || product == null) {
+                log.debug("Missing data for buffer: {} (Product: {}, Location: {}) - CP: {}, LT: {}, P: {}",
+                        buffer.getBufferId(), buffer.getProductId(), buffer.getLocationId(),
+                        consumptionProfile != null, leadTime != null, product != null);
+                return null;
+            }
+
+            Integer currentInventory = buffer.getCurrentInventory() != null ? buffer.getCurrentInventory() : 0;
+            Integer inPipelineQty = buffer.getInPipelineQty() != null ? buffer.getInPipelineQty() : 0;
+            Integer netAvailableQty = buffer.getNetAvailableQty() != null ? buffer.getNetAvailableQty() : 0;
+            Integer bufferUnits = buffer.getBufferUnits() != null ? buffer.getBufferUnits() : 0;
+            String currentZone = buffer.getCurrentZone() != null ? buffer.getCurrentZone() : "GREEN";
+
+            Integer bufferDeficit = calculateBufferDeficit(buffer);
+            Double daysOfSupply = calculateDaysOfSupply(buffer, consumptionProfile);
+            String recommendedAction = determineRecommendedAction(buffer, daysOfSupply, leadTime);
+            Integer recommendedQty = calculateRecommendedQty(bufferDeficit, product.getMoq(), recommendedAction);
+            Double priorityScore = calculatePriorityScore(buffer, bufferDeficit);
+            List<String> reasonCodes = generateReasonCodes(buffer, daysOfSupply, leadTime);
+
+            ReplenishmentQueue queueItem = new ReplenishmentQueue();
+            queueItem.setQueueId(generateQueueId(buffer));
+            queueItem.setProductId(buffer.getProductId());
+            queueItem.setLocationId(buffer.getLocationId());
+            queueItem.setCurrentInventory(currentInventory);
+            queueItem.setInPipelineQty(inPipelineQty);
+            queueItem.setNetAvailableQty(netAvailableQty);
+            queueItem.setBufferUnits(bufferUnits);
+            queueItem.setBufferGap(bufferDeficit);
+            queueItem.setBufferZone(currentZone);
+            queueItem.setDaysOfSupply(daysOfSupply);
+            queueItem.setRecommendedQty(recommendedQty);
+            queueItem.setRecommendedAction(recommendedAction);
+            queueItem.setPriorityScore(priorityScore);
+            queueItem.setAdcUsed(consumptionProfile.getAdcNormalized());
+            queueItem.setLeadTimeDays(leadTime.getBufferLeadTimeDays());
+            queueItem.setReasonCodes(reasonCodes);
+            queueItem.setQueueDate(LocalDateTime.now());
+            queueItem.setStatus("PENDING");
+            queueItem.setIsActive(true);
+
+            log.debug("Successfully created queue item for buffer: {}", buffer.getBufferId());
+            return queueItem;
+
+        } catch (Exception e) {
+            log.error("Error in processBuffer for buffer: {} - {}", buffer.getBufferId(), e.getMessage(), e);
+            return null;
+        }
+    }
+
+    private Integer calculateBufferDeficit(InventoryBuffer buffer) {
+        Integer bufferUnits = buffer.getBufferUnits() != null ? buffer.getBufferUnits() : 0;
+        Integer netAvailable = buffer.getNetAvailableQty() != null ? buffer.getNetAvailableQty() : 0;
+        return Math.max(0, bufferUnits - netAvailable);
+    }
+
+    private Double calculateDaysOfSupply(InventoryBuffer buffer, ConsumptionProfile consumptionProfile) {
+        Double adcNormalized = consumptionProfile.getAdcNormalized();
+        if (adcNormalized == null || adcNormalized <= 0) {
+            return 0.0;
+        }
+        Integer netAvailable = buffer.getNetAvailableQty() != null ? buffer.getNetAvailableQty() : 0;
+        return netAvailable.doubleValue() / adcNormalized;
+    }
+
+    private String determineRecommendedAction(InventoryBuffer buffer, Double daysOfSupply, LeadTime leadTime) {
+        Integer bufferDeficit = calculateBufferDeficit(buffer);
+        String currentZone = buffer.getCurrentZone() != null ? buffer.getCurrentZone() : "GREEN";
+        Double leadTimeDays = leadTime.getBufferLeadTimeDays() != null ? leadTime.getBufferLeadTimeDays() : 7.0;
+
+        if (bufferDeficit > 0) {
+            if ("RED".equalsIgnoreCase(currentZone) && daysOfSupply < (leadTimeDays / 2.0)) {
+                return "EXPEDITE";
+            }
+            return "ORDER";
+        }
+        return "MONITOR";
+    }
+
+    private Integer calculateRecommendedQty(Integer bufferDeficit, Integer moq, String recommendedAction) {
+        if ("MONITOR".equals(recommendedAction)) {
+            return 0;
+        }
+        if (bufferDeficit <= 0) {
+            return 0;
+        }
+        Integer minOrderQty = moq != null ? moq : 1;
+        return Math.max(minOrderQty, bufferDeficit);
+    }
+
+    private Double calculatePriorityScore(InventoryBuffer buffer, Integer bufferDeficit) {
+        String currentZone = buffer.getCurrentZone() != null ? buffer.getCurrentZone().toLowerCase() : "GREEN";
+        double zoneWeight = switch (currentZone) {
+            case "red", "critical" -> 100.0;
+            case "yellow" -> 50.0;
+            case "green" -> 10.0;
+            default -> 10.0;
+        };
+        double bufferPenetration = 0.0;
+        Integer bufferUnits = buffer.getBufferUnits();
+        if (bufferUnits != null && bufferUnits > 0 && bufferDeficit != null) {
+            bufferPenetration = (bufferDeficit.doubleValue() / bufferUnits) * 100;
+        }
+        return zoneWeight + bufferPenetration;
+    }
+
+    private List<String> generateReasonCodes(InventoryBuffer buffer, Double daysOfSupply, LeadTime leadTime) {
+        List<String> reasonCodes = new ArrayList<>();
+        String currentZone = buffer.getCurrentZone() != null ? buffer.getCurrentZone().toLowerCase() : "GREEN";
+        Double leadTimeDays = leadTime.getBufferLeadTimeDays() != null ? leadTime.getBufferLeadTimeDays() : 7.0;
+
+        if ("red".equalsIgnoreCase(currentZone)) {
+            reasonCodes.add("RED_ZONE");
+        } else if ("yellow".equalsIgnoreCase(currentZone)) {
+            reasonCodes.add("YELLOW_ZONE");
+        }
+        if (daysOfSupply != null && daysOfSupply < leadTimeDays) {
+            reasonCodes.add("LOW_DAYS_OF_SUPPLY");
+        }
+        Integer bufferDeficit = calculateBufferDeficit(buffer);
+        if (bufferDeficit > 0) {
+            reasonCodes.add("BUFFER_DEFICIT");
+        }
+        if (reasonCodes.isEmpty()) {
+            reasonCodes.add("ROUTINE_REVIEW");
+        }
+        return reasonCodes;
+    }
+
+    private String generateQueueId(InventoryBuffer buffer) {
+        String bufferId = buffer.getBufferId() != null ? buffer.getBufferId() : "UNKNOWN";
+        return String.format("QUEUE-%d-%s", System.currentTimeMillis(), bufferId);
+    }
+
+    private void validateRepositories() {
+        if (bufferRepository == null) {
+            throw new IllegalStateException("BufferRepository is not initialized");
+        }
+        if (queueRepository == null) {
+            throw new IllegalStateException("QueueRepository is not initialized");
+        }
+        if (consumptionProfileRepository == null) {
+            throw new IllegalStateException("ConsumptionProfileRepository is not initialized");
+        }
+        if (leadTimeRepository == null) {
+            throw new IllegalStateException("LeadTimeRepository is not initialized");
+        }
+        if (productRepository == null) {
+            throw new IllegalStateException("ProductRepository is not initialized");
+        }
     }
 }

@@ -15,4 +15,6 @@ public interface ReplenishmentQueueService {
     Page<ReplenishmentQueueDTO> getQueueItemsByBufferZoneAndStatus(String bufferZone, String status, Pageable pageable);
     Page<InventoryOrderPipelineDTO> getInTransitOrders(String locationId, Pageable pageable);
     void cancelOrder(String orderId);
+    Page<ReplenishmentQueueDTO> getAllReplenishmentQueues(Pageable pageable);
+
 }

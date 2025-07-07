@@ -1,5 +1,6 @@
 package com.onified.distribute.controller;
 
+import com.onified.distribute.dto.BufferConsumptionResponseDTO;
 import com.onified.distribute.dto.ConsumptionProfileDTO;
 import com.onified.distribute.service.ConsumptionProfileService;
 import lombok.RequiredArgsConstructor;
@@ -28,9 +29,9 @@ public class ConsumptionProfileController {
 
     @PostMapping
     public ResponseEntity<ConsumptionProfileDTO> createConsumptionProfile(@Valid @RequestBody ConsumptionProfileDTO profileDto) {
-        log.info("Creating consumption profile for product: {} at location: {}", 
+        log.info("Creating consumption profile for product: {} at location: {}",
                 profileDto.getProductId(), profileDto.getLocationId());
-        
+
         ConsumptionProfileDTO createdProfile = consumptionProfileService.createConsumptionProfile(profileDto);
         return new ResponseEntity<>(createdProfile, HttpStatus.CREATED);
     }
@@ -40,7 +41,7 @@ public class ConsumptionProfileController {
             @PathVariable String profileId,
             @Valid @RequestBody ConsumptionProfileDTO profileDto) {
         log.info("Updating consumption profile: {}", profileId);
-        
+
         ConsumptionProfileDTO updatedProfile = consumptionProfileService.updateConsumptionProfile(profileId, profileDto);
         return ResponseEntity.ok(updatedProfile);
     }
@@ -48,7 +49,7 @@ public class ConsumptionProfileController {
     @GetMapping("/{profileId}")
     public ResponseEntity<ConsumptionProfileDTO> getConsumptionProfileById(@PathVariable String profileId) {
         log.info("Fetching consumption profile: {}", profileId);
-        
+
         ConsumptionProfileDTO profile = consumptionProfileService.getConsumptionProfileById(profileId);
         return ResponseEntity.ok(profile);
     }
@@ -58,7 +59,7 @@ public class ConsumptionProfileController {
             @PathVariable String productId,
             @PathVariable String locationId) {
         log.info("Fetching consumption profile for product: {} at location: {}", productId, locationId);
-        
+
         ConsumptionProfileDTO profile = consumptionProfileService.getConsumptionProfileByProductAndLocation(productId, locationId);
         return ResponseEntity.ok(profile);
     }
@@ -70,38 +71,14 @@ public class ConsumptionProfileController {
             @RequestParam(defaultValue = "calculationDate") String sortBy,
             @RequestParam(defaultValue = "desc") String sortDir) {
         log.info("Fetching all consumption profiles - page: {}, size: {}", page, size);
-        
-        Sort sort = sortDir.equalsIgnoreCase("desc") ? 
+
+        Sort sort = sortDir.equalsIgnoreCase("desc") ?
                 Sort.by(sortBy).descending() : Sort.by(sortBy).ascending();
         Pageable pageable = PageRequest.of(page, size, sort);
-        
+
         Page<ConsumptionProfileDTO> profiles = consumptionProfileService.getAllConsumptionProfiles(pageable);
         return ResponseEntity.ok(profiles);
     }
-
-//    @GetMapping("/product/{productId}")
-//    public ResponseEntity<Page<ConsumptionProfileDTO>> getConsumptionProfilesByProduct(
-//            @PathVariable String productId,
-//            @RequestParam(defaultValue = "0") @Min(0) int page,
-//            @RequestParam(defaultValue = "20") @Min(1) int size) {
-//        log.info("Fetching consumption profiles by product: {}", productId);
-//
-//        Pageable pageable = PageRequest.of(page, size, Sort.by("calculationDate").descending());
-//        Page<ConsumptionProfileDTO> profiles = consumptionProfileService.getConsumptionProfilesByProduct(productId, pageable);
-//        return ResponseEntity.ok(profiles);
-//    }
-//
-//    @GetMapping("/location/{locationId}")
-//    public ResponseEntity<Page<ConsumptionProfileDTO>> getConsumptionProfilesByLocation(
-//            @PathVariable String locationId,
-//            @RequestParam(defaultValue = "0") @Min(0) int page,
-//            @RequestParam(defaultValue = "20") @Min(1) int size) {
-//        log.info("Fetching consumption profiles by location: {}", locationId);
-//
-//        Pageable pageable = PageRequest.of(page, size, Sort.by("calculationDate").descending());
-//        Page<ConsumptionProfileDTO> profiles = consumptionProfileService.getConsumptionProfilesByLocation(locationId, pageable);
-//        return ResponseEntity.ok(profiles);
-//    }
 
     @GetMapping("/trend/{adcTrend}")
     public ResponseEntity<Page<ConsumptionProfileDTO>> getConsumptionProfilesByTrend(
@@ -109,7 +86,7 @@ public class ConsumptionProfileController {
             @RequestParam(defaultValue = "0") @Min(0) int page,
             @RequestParam(defaultValue = "20") @Min(1) int size) {
         log.info("Fetching consumption profiles by trend: {}", adcTrend);
-        
+
         Pageable pageable = PageRequest.of(page, size, Sort.by("calculationDate").descending());
         Page<ConsumptionProfileDTO> profiles = consumptionProfileService.getConsumptionProfilesByTrend(adcTrend, pageable);
         return ResponseEntity.ok(profiles);
@@ -120,7 +97,7 @@ public class ConsumptionProfileController {
             @RequestParam String productId,
             @RequestParam String locationId) {
         log.info("Calculating consumption profile for product: {} at location: {}", productId, locationId);
-        
+
         ConsumptionProfileDTO profile = consumptionProfileService.calculateConsumptionProfile(productId, locationId);
         return new ResponseEntity<>(profile, HttpStatus.CREATED);
     }
@@ -128,31 +105,15 @@ public class ConsumptionProfileController {
     @PutMapping("/{profileId}/recalculate")
     public ResponseEntity<ConsumptionProfileDTO> recalculateProfile(@PathVariable String profileId) {
         log.info("Recalculating consumption profile: {}", profileId);
-        
+
         ConsumptionProfileDTO profile = consumptionProfileService.recalculateProfile(profileId);
         return ResponseEntity.ok(profile);
     }
 
-//    @GetMapping("/needs-recalculation")
-//    public ResponseEntity<Page<ConsumptionProfileDTO>> getProfilesNeedingRecalculation(
-//            @RequestParam(required = false) String cutoffHours,
-//            @RequestParam(defaultValue = "0") @Min(0) int page,
-//            @RequestParam(defaultValue = "20") @Min(1) int size) {
-//        log.info("Fetching profiles needing recalculation");
-//
-//        LocalDateTime cutoffDate = cutoffHours != null ?
-//                LocalDateTime.now().minusHours(Long.parseLong(cutoffHours)) :
-//                LocalDateTime.now().minusHours(24);
-//
-//        Pageable pageable = PageRequest.of(page, size, Sort.by("calculationDate").ascending());
-//        Page<ConsumptionProfileDTO> profiles = consumptionProfileService.getProfilesNeedingRecalculation(cutoffDate, pageable);
-//        return ResponseEntity.ok(profiles);
-//    }
-
     @DeleteMapping("/{profileId}")
     public ResponseEntity<Void> deleteConsumptionProfile(@PathVariable String profileId) {
         log.info("Deleting consumption profile: {}", profileId);
-        
+
         consumptionProfileService.deleteConsumptionProfile(profileId);
         return ResponseEntity.noContent().build();
     }
@@ -162,8 +123,30 @@ public class ConsumptionProfileController {
             @RequestParam String productId,
             @RequestParam String locationId) {
         log.info("Checking if profile exists for product: {} at location: {}", productId, locationId);
-        
+
         boolean exists = consumptionProfileService.existsByProductAndLocation(productId, locationId);
         return ResponseEntity.ok(exists);
+    }
+
+    @GetMapping("/buffer-consumption")
+    public ResponseEntity<BufferConsumptionResponseDTO> getBufferConsumptionData(
+            @RequestParam(required = false) String productId,
+            @RequestParam(required = false) String locationId,
+            @RequestParam(required = false) String bufferZone,
+            @RequestParam(required = false) String category,
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "20") @Min(1) int size,
+            @RequestParam(defaultValue = "consumptionDate") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortDir) {
+        log.info("Fetching buffer and consumption data with filters - productId: {}, locationId: {}, bufferZone: {}, category: {}, page: {}, size: {}",
+                productId, locationId, bufferZone, category, page, size);
+
+        Sort sort = sortDir.equalsIgnoreCase("desc") ?
+                Sort.by(sortBy).descending() : Sort.by(sortBy).ascending();
+        Pageable pageable = PageRequest.of(page, size, sort);
+
+        BufferConsumptionResponseDTO response = consumptionProfileService.getBufferConsumptionData(
+                productId, locationId, bufferZone, category, pageable);
+        return ResponseEntity.ok(response);
     }
 }
