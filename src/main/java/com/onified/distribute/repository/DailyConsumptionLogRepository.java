@@ -19,6 +19,14 @@ public interface DailyConsumptionLogRepository extends MongoRepository<DailyCons
     // Find by Product and Location
     Page<DailyConsumptionLog> findByProductIdAndLocationId(String productId, String locationId, Pageable pageable);
 
+    @Query("{'productId': ?0, 'locationId': ?1, 'consumptionDate': {'$gte': ?2, '$lt': ?3}}")
+    Optional<DailyConsumptionLog> findByProductIdAndLocationIdAndConsumptionDateBetween(
+            String productId,
+            String locationId,
+            LocalDateTime startDate,
+            LocalDateTime endDate
+    );
+
     // Find by Location
     Page<DailyConsumptionLog> findByLocationId(String locationId, Pageable pageable);
 

@@ -64,6 +64,24 @@ public class SeasonalityAdjustmentController {
         return ResponseEntity.ok(adjustments);
     }
 
+//    @GetMapping("/product/{productId}")
+//    public ResponseEntity<Page<SeasonalityAdjustmentDTO>> getSeasonalityAdjustmentsByProduct(
+//            @PathVariable String productId,
+//            Pageable pageable) {
+//        log.info("Fetching seasonality adjustments by product: {}", productId);
+//        Page<SeasonalityAdjustmentDTO> adjustments = seasonalityAdjustmentService.getSeasonalityAdjustmentsByProduct(productId, pageable);
+//        return ResponseEntity.ok(adjustments);
+//    }
+//
+//    @GetMapping("/location/{locationId}")
+//    public ResponseEntity<Page<SeasonalityAdjustmentDTO>> getSeasonalityAdjustmentsByLocation(
+//            @PathVariable String locationId,
+//            Pageable pageable) {
+//        log.info("Fetching seasonality adjustments by location: {}", locationId);
+//        Page<SeasonalityAdjustmentDTO> adjustments = seasonalityAdjustmentService.getSeasonalityAdjustmentsByLocation(locationId, pageable);
+//        return ResponseEntity.ok(adjustments);
+//    }
+
     @GetMapping("/month/{month}")
     public ResponseEntity<Page<SeasonalityAdjustmentDTO>> getSeasonalityAdjustmentsByMonth(
             @PathVariable @Min(1) @Max(12) Integer month, 

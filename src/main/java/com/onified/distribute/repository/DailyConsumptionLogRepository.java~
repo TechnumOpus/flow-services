@@ -4,6 +4,7 @@ import com.onified.distribute.entity.DailyConsumptionLog;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.mongodb.repository.Aggregation;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.data.mongodb.repository.Query;
 import org.springframework.stereotype.Repository;
@@ -30,7 +31,7 @@ public interface DailyConsumptionLogRepository extends MongoRepository<DailyCons
     // Find latest consumption for product and location
     @Query(value = "{ 'productId': ?0, 'locationId': ?1 }", sort = "{ 'consumptionDate': -1, '_id': -1 }")
     Optional<DailyConsumptionLog> findLatestConsumptionByProductAndLocation(String productId, String locationId);
-    
+
     // Check if consumption exists for specific date
     boolean existsByProductIdAndLocationIdAndConsumptionDate(String productId, String locationId, LocalDateTime consumptionDate);
 
@@ -52,4 +53,11 @@ public interface DailyConsumptionLogRepository extends MongoRepository<DailyCons
 
     @Query("{'productId': ?0, 'locationId': ?1, 'consumptionDate': {$gte: ?2}}")
     List<DailyConsumptionLog> findRecentConsumption(String productId, String locationId, LocalDateTime cutoff);
+
+    // Sum quantity_consumed for a product and location since a cutoff time
+    @Aggregation(pipeline = {
+            "{'$match': {'productId': ?0, 'locationId': ?1, 'consumptionDate': {$gte: ?2}}}",
+            "{'$group': {'_id': null, 'totalConsumed': {'$sum': '$quantityConsumed'}}}"
+    })
+    Integer sumQuantityConsumed(String productId, String locationId, LocalDateTime cutoff);
 }
