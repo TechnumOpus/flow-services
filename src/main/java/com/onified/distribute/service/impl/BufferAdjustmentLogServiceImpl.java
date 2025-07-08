@@ -259,9 +259,5 @@ public class BufferAdjustmentLogServiceImpl implements BufferAdjustmentLogServic
         adjustmentLog.setApprovalDate(dto.getApprovalDate());
         adjustmentLog.setCreatedBy(dto.getCreatedBy());
         adjustmentLog.setComments(dto.getComments());
-        // Note: We don't update logId and adjustmentDate in update operations
     }
 }
-
-/*please my basic CRUD shall work and it should be able to work on some business logics as metioned make it simple and perfect working focus on these codes only which i have given 
- */

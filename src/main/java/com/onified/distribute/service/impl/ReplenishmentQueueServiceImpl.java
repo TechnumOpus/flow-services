@@ -1,6 +1,6 @@
 package com.onified.distribute.service.impl;
 
-import com.onified.distribute.dto.InventoryBufferDTO;
+import com.onified.distribute.dto.*;
 import com.onified.distribute.dto.InventoryOrderPipelineDTO;
 import com.onified.distribute.dto.ReplenishmentQueueDTO;
 import com.onified.distribute.entity.*;
@@ -21,6 +21,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.List;
+import java.util.Optional;
+
 
 @Slf4j
 @Service
@@ -37,6 +42,147 @@ public class ReplenishmentQueueServiceImpl implements ReplenishmentQueueService 
     private final InventoryBufferService inventoryBufferService;
     private final LocationRepository locationRepository;
     private final InventoryOrderPipelineRepository inventoryOrderPipelineRepository;
+
+    @Override
+    public Page<ReplenishmentQueueResponseDTO> getAllReplenishmentQueuesEnhanced(Pageable pageable) {
+        log.info("Fetching all replenishment queues with enhanced format");
+
+        Page<ReplenishmentQueue> queues = queueRepository.findByIsActiveTrue(pageable);
+        return queues.map(this::convertToEnhancedDto);
+    }
+
+    @Override
+    public Page<ReplenishmentQueueResponseDTO> getReplenishmentQueuesWithFilters(
+            ReplenishmentQueueFilterDTO filters, Pageable pageable) {
+        log.info("Fetching replenishment queues with filters: {}", filters);
+
+        Page<ReplenishmentQueue> queues = queueRepository.findByFilters(
+                filters.getProductId(),
+                filters.getLocationId(),
+                filters.getBufferZone(),
+                filters.getStatus(),
+                filters.getMinBufferGap(),
+                filters.getMaxBufferGap(),
+                filters.getMinDaysOfSupply(),
+                filters.getMaxDaysOfSupply(),
+                filters.getRecommendedAction(),
+                filters.getMinPriorityScore(),
+                filters.getMaxPriorityScore(),
+                pageable
+        );
+
+        return queues.map(this::convertToEnhancedDto);
+    }
+
+    private ReplenishmentQueueResponseDTO convertToEnhancedDto(ReplenishmentQueue queue) {
+        ReplenishmentQueueResponseDTO dto = new ReplenishmentQueueResponseDTO();
+
+        dto.setId(queue.getId());
+        dto.setQueueId(queue.getQueueId());
+        dto.setProductId(queue.getProductId());
+        dto.setLocationId(queue.getLocationId());
+        dto.setBufferUnits(queue.getBufferUnits());
+        dto.setInHand(queue.getCurrentInventory());
+        dto.setInPipeline(queue.getInPipelineQty());
+        dto.setNetAvailability(queue.getNetAvailableQty());
+        dto.setBufferGap(queue.getBufferGap());
+        dto.setDaysOfSupply(queue.getDaysOfSupply());
+        dto.setBufferZone(queue.getBufferZone());
+        dto.setRecommendedAction(queue.getRecommendedAction());
+        dto.setPriorityScore(queue.getPriorityScore());
+        dto.setStatus(queue.getStatus());
+        dto.setQueueDate(queue.getQueueDate());
+        dto.setReasonCodes(queue.getReasonCodes());
+
+        // Fetch product details for MOQ and name
+        Optional<Product> product = productRepository.findByProductId(queue.getProductId());
+        if (product.isPresent()) {
+            dto.setMoq(product.get().getMoq());
+            dto.setProductName(product.get().getName());
+        } else {
+            dto.setMoq(0);
+            dto.setProductName("Unknown Product");
+        }
+
+        // Fetch location details for name
+        Optional<Location> location = locationRepository.findByLocationId(queue.getLocationId());
+        if (location.isPresent()) {
+            dto.setLocationName(location.get().getName());
+        } else {
+            dto.setLocationName("Unknown Location");
+        }
+
+        return dto;
+    }
+
+    // Batch conversion method for better performance
+    private List<ReplenishmentQueueResponseDTO> convertToEnhancedDtoBatch(List<ReplenishmentQueue> queues) {
+        // Get unique product IDs and location IDs
+        List<String> productIds = queues.stream()
+                .map(ReplenishmentQueue::getProductId)
+                .distinct()
+                .collect(Collectors.toList());
+
+        List<String> locationIds = queues.stream()
+                .map(ReplenishmentQueue::getLocationId)
+                .distinct()
+                .collect(Collectors.toList());
+
+        // Fetch products and locations in batch
+        List<Product> products = productRepository.findByProductIdIn(productIds);
+        List<Location> locations = locationRepository.findByLocationIdIn(locationIds);
+
+        // Create maps for quick lookup
+        Map<String, Product> productMap = products.stream()
+                .collect(Collectors.toMap(Product::getProductId, p -> p));
+
+        Map<String, Location> locationMap = locations.stream()
+                .collect(Collectors.toMap(Location::getLocationId, l -> l));
+
+        // Convert to DTOs
+        return queues.stream()
+                .map(queue -> {
+                    ReplenishmentQueueResponseDTO dto = new ReplenishmentQueueResponseDTO();
+
+                    dto.setId(queue.getId());
+                    dto.setQueueId(queue.getQueueId());
+                    dto.setProductId(queue.getProductId());
+                    dto.setLocationId(queue.getLocationId());
+                    dto.setBufferUnits(queue.getBufferUnits());
+                    dto.setInHand(queue.getCurrentInventory());
+                    dto.setInPipeline(queue.getInPipelineQty());
+                    dto.setNetAvailability(queue.getNetAvailableQty());
+                    dto.setBufferGap(queue.getBufferGap());
+                    dto.setDaysOfSupply(queue.getDaysOfSupply());
+                    dto.setBufferZone(queue.getBufferZone());
+                    dto.setRecommendedAction(queue.getRecommendedAction());
+                    dto.setPriorityScore(queue.getPriorityScore());
+                    dto.setStatus(queue.getStatus());
+                    dto.setQueueDate(queue.getQueueDate());
+                    dto.setReasonCodes(queue.getReasonCodes());
+
+                    // Set product details
+                    Product product = productMap.get(queue.getProductId());
+                    if (product != null) {
+                        dto.setMoq(product.getMoq());
+                        dto.setProductName(product.getName());
+                    } else {
+                        dto.setMoq(0);
+                        dto.setProductName("Unknown Product");
+                    }
+
+                    // Set location details
+                    Location location = locationMap.get(queue.getLocationId());
+                    if (location != null) {
+                        dto.setLocationName(location.getName());
+                    } else {
+                        dto.setLocationName("Unknown Location");
+                    }
+
+                    return dto;
+                })
+                .collect(Collectors.toList());
+    }
 
     @Override
     public void processReplenishmentQueue() {

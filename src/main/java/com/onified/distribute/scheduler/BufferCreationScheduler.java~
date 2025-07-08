@@ -34,7 +34,7 @@ public class BufferCreationScheduler {
     private final DailyConsumptionLogRepository dailyConsumptionLogRepository;
     private final ReviewCycleRepository reviewCycleRepository;
 
-    @Scheduled(cron = "0 04 21 * * ?")
+    @Scheduled(cron = "0 57 11 * * ?")
     @Transactional
     public void createAutomaticBuffers() {
         log.info("Starting automatic buffer creation process at {}", LocalDateTime.now());

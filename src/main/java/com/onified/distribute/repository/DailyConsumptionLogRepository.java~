@@ -7,6 +7,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.repository.Aggregation;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.data.mongodb.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
@@ -18,6 +19,32 @@ public interface DailyConsumptionLogRepository extends MongoRepository<DailyCons
 
     // Find by Product and Location
     Page<DailyConsumptionLog> findByProductIdAndLocationId(String productId, String locationId, Pageable pageable);
+
+//        // Existing method (if you have it)
+//        @Query("SELECT COALESCE(SUM(d.quantityConsumed), 0) FROM DailyConsumptionLog d " +
+//                "WHERE d.productId = :productId AND d.locationId = :locationId " +
+//                "AND d.consumptionDate >= :startDate")
+//        Integer sumQuantityConsumed(@Param("productId") String productId,
+//                                    @Param("locationId") String locationId,
+//                                    @Param("startDate") LocalDateTime startDate);
+
+        // New method for yesterday's consumption
+        @Query("SELECT COALESCE(SUM(d.quantityConsumed), 0) FROM DailyConsumptionLog d " +
+                "WHERE d.productId = :productId AND d.locationId = :locationId " +
+                "AND d.consumptionDate >= :startDate AND d.consumptionDate <= :endDate")
+        Integer sumQuantityConsumedBetweenDates(@Param("productId") String productId,
+                                                @Param("locationId") String locationId,
+                                                @Param("startDate") LocalDateTime startDate,
+                                                @Param("endDate") LocalDateTime endDate);
+
+
+    @Query("{'productId': ?0, 'locationId': ?1, 'consumptionDate': {'$gte': ?2, '$lt': ?3}}")
+    Optional<DailyConsumptionLog> findByProductIdAndLocationIdAndConsumptionDateBetween(
+            String productId,
+            String locationId,
+            LocalDateTime startDate,
+            LocalDateTime endDate
+    );
 
     // Find by Location
     Page<DailyConsumptionLog> findByLocationId(String locationId, Pageable pageable);

@@ -26,25 +26,25 @@ public class SeasonalityAdjustmentServiceImpl implements SeasonalityAdjustmentSe
 
     @Override
     public SeasonalityAdjustmentDTO createSeasonalityAdjustment(SeasonalityAdjustmentDTO adjustmentDto) {
-        log.info("Creating seasonality adjustment for product: {} at location: {} for month: {}", 
+        log.info("Creating seasonality adjustment for product: {} at location: {} for month: {}",
                 adjustmentDto.getProductId(), adjustmentDto.getLocationId(), adjustmentDto.getMonth());
-        
-        if (adjustmentDto.getAdjustmentId() != null && 
-            seasonalityAdjustmentRepository.existsByAdjustmentId(adjustmentDto.getAdjustmentId())) {
+
+        if (adjustmentDto.getAdjustmentId() != null &&
+                seasonalityAdjustmentRepository.existsByAdjustmentId(adjustmentDto.getAdjustmentId())) {
             throw new IllegalArgumentException("Adjustment ID already exists: " + adjustmentDto.getAdjustmentId());
         }
-        
+
         SeasonalityAdjustment adjustment = mapToEntity(adjustmentDto);
         adjustment.setCreatedAt(LocalDateTime.now());
         adjustment.setUpdatedAt(LocalDateTime.now());
-        
+
         if (adjustment.getAdjustmentId() == null) {
             adjustment.setAdjustmentId("ADJ-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
         }
-        
+
         SeasonalityAdjustment savedAdjustment = seasonalityAdjustmentRepository.save(adjustment);
         log.info("Seasonality adjustment created successfully with ID: {}", savedAdjustment.getAdjustmentId());
-        
+
         return mapToDto(savedAdjustment);
     }
 
@@ -52,7 +52,7 @@ public class SeasonalityAdjustmentServiceImpl implements SeasonalityAdjustmentSe
     @Transactional(readOnly = true)
     public SeasonalityAdjustmentDTO getSeasonalityAdjustmentById(String adjustmentId) {
         SeasonalityAdjustment adjustment = seasonalityAdjustmentRepository.findByAdjustmentId(adjustmentId)
-            .orElseThrow(() -> new IllegalArgumentException("Seasonality adjustment not found: " + adjustmentId));
+                .orElseThrow(() -> new IllegalArgumentException("Seasonality adjustment not found: " + adjustmentId));
         return mapToDto(adjustment);
     }
 
@@ -90,59 +90,59 @@ public class SeasonalityAdjustmentServiceImpl implements SeasonalityAdjustmentSe
     @Transactional(readOnly = true)
     public List<SeasonalityAdjustmentDTO> getSeasonalityAdjustmentsByProductAndLocation(String productId, String locationId) {
         return seasonalityAdjustmentRepository.findByProductIdAndLocationIdAndIsActive(productId, locationId, true)
-            .stream()
-            .map(this::mapToDto)
-            .collect(Collectors.toList());
+                .stream()
+                .map(this::mapToDto)
+                .collect(Collectors.toList());
     }
 
     @Override
     @Transactional(readOnly = true)
     public Double getSeasonalityFactor(String productId, String locationId, Integer month) {
         return seasonalityAdjustmentRepository.findByProductIdAndLocationIdAndMonthAndIsActive(
-            productId, locationId, month, true)
-            .map(SeasonalityAdjustment::getSeasonalityFactor)
-            .orElse(1.0); // Default factor if no adjustment found
+                        productId, locationId, month, true)
+                .map(SeasonalityAdjustment::getSeasonalityFactor)
+                .orElse(1.0); // Default factor if no adjustment found
     }
 
     @Override
     public SeasonalityAdjustmentDTO activateSeasonalityAdjustment(String adjustmentId) {
         log.info("Activating seasonality adjustment: {}", adjustmentId);
-        
+
         SeasonalityAdjustment adjustment = seasonalityAdjustmentRepository.findByAdjustmentId(adjustmentId)
-            .orElseThrow(() -> new IllegalArgumentException("Seasonality adjustment not found: " + adjustmentId));
-        
+                .orElseThrow(() -> new IllegalArgumentException("Seasonality adjustment not found: " + adjustmentId));
+
         adjustment.setIsActive(true);
         adjustment.setUpdatedAt(LocalDateTime.now());
-        
+
         SeasonalityAdjustment savedAdjustment = seasonalityAdjustmentRepository.save(adjustment);
         log.info("Seasonality adjustment activated successfully: {}", adjustmentId);
-        
+
         return mapToDto(savedAdjustment);
     }
 
     @Override
     public SeasonalityAdjustmentDTO deactivateSeasonalityAdjustment(String adjustmentId) {
         log.info("Deactivating seasonality adjustment: {}", adjustmentId);
-        
+
         SeasonalityAdjustment adjustment = seasonalityAdjustmentRepository.findByAdjustmentId(adjustmentId)
-            .orElseThrow(() -> new IllegalArgumentException("Seasonality adjustment not found: " + adjustmentId));
-        
+                .orElseThrow(() -> new IllegalArgumentException("Seasonality adjustment not found: " + adjustmentId));
+
         adjustment.setIsActive(false);
         adjustment.setUpdatedAt(LocalDateTime.now());
-        
+
         SeasonalityAdjustment savedAdjustment = seasonalityAdjustmentRepository.save(adjustment);
         log.info("Seasonality adjustment deactivated successfully: {}", adjustmentId);
-        
+
         return mapToDto(savedAdjustment);
     }
 
     @Override
     public void deleteSeasonalityAdjustment(String adjustmentId) {
         log.info("Deleting seasonality adjustment: {}", adjustmentId);
-        
+
         SeasonalityAdjustment adjustment = seasonalityAdjustmentRepository.findByAdjustmentId(adjustmentId)
-            .orElseThrow(() -> new IllegalArgumentException("Seasonality adjustment not found: " + adjustmentId));
-        
+                .orElseThrow(() -> new IllegalArgumentException("Seasonality adjustment not found: " + adjustmentId));
+
         seasonalityAdjustmentRepository.delete(adjustment);
         log.info("Seasonality adjustment deleted successfully: {}", adjustmentId);
     }
@@ -152,7 +152,7 @@ public class SeasonalityAdjustmentServiceImpl implements SeasonalityAdjustmentSe
         log.info("Updating seasonality adjustment: {}", adjustmentId);
 
         SeasonalityAdjustment adjustment = seasonalityAdjustmentRepository.findByAdjustmentId(adjustmentId)
-            .orElseThrow(() -> new IllegalArgumentException("Seasonality adjustment not found: " + adjustmentId));
+                .orElseThrow(() -> new IllegalArgumentException("Seasonality adjustment not found: " + adjustmentId));
 
         updateEntityFromDto(adjustment, adjustmentDto);
         adjustment.setUpdatedAt(LocalDateTime.now());

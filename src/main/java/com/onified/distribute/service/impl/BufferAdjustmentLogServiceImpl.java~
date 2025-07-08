@@ -22,10 +22,6 @@ public class BufferAdjustmentLogServiceImpl implements BufferAdjustmentLogServic
     
     private final BufferAdjustmentLogRepository bufferAdjustmentLogRepository;
 
-
-
-
-
     @Override
     @Transactional(readOnly = true)
     public Page<BufferAdjustmentLogDTO> getBufferAdjustmentLogsByCreatedBy(String createdBy, Pageable pageable) {

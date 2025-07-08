@@ -34,7 +34,7 @@ public class ConsumptionProfileScheduler {
     private final SpecialEventService specialEventService;
     private final MongoTemplate mongoTemplate;
 
-    @Scheduled(cron = "0 0 2 * * ?")
+    @Scheduled(cron = "0 37 17 * * ?")
     @Transactional
     public void recalculateConsumptionProfiles() {
         log.info("Starting scheduled recalculation of consumption profiles at {}",

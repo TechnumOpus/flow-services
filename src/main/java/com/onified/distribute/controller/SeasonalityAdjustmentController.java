@@ -28,7 +28,7 @@ public class SeasonalityAdjustmentController {
     @PostMapping
     public ResponseEntity<SeasonalityAdjustmentDTO> createSeasonalityAdjustment(
             @Valid @RequestBody SeasonalityAdjustmentDTO adjustmentDto) {
-        log.info("Creating seasonality adjustment for product: {} at location: {} for month: {}", 
+        log.info("Creating seasonality adjustment for product: {} at location: {} for month: {}",
                 adjustmentDto.getProductId(), adjustmentDto.getLocationId(), adjustmentDto.getMonth());
         SeasonalityAdjustmentDTO createdAdjustment = seasonalityAdjustmentService.createSeasonalityAdjustment(adjustmentDto);
         return new ResponseEntity<>(createdAdjustment, HttpStatus.CREATED);
@@ -66,7 +66,7 @@ public class SeasonalityAdjustmentController {
 
     @GetMapping("/month/{month}")
     public ResponseEntity<Page<SeasonalityAdjustmentDTO>> getSeasonalityAdjustmentsByMonth(
-            @PathVariable @Min(1) @Max(12) Integer month, 
+            @PathVariable @Min(1) @Max(12) Integer month,
             Pageable pageable) {
         log.info("Fetching seasonality adjustments by month: {}", month);
         Page<SeasonalityAdjustmentDTO> adjustments = seasonalityAdjustmentService.getSeasonalityAdjustmentsByMonth(month, pageable);

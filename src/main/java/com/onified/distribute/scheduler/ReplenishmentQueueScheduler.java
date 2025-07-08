@@ -16,7 +16,7 @@ public class ReplenishmentQueueScheduler {
     private final ReplenishmentQueueService replenishmentQueueService;
 
     // Run hourly
-    @Scheduled(cron = "0 0 * * * ?")
+    @Scheduled(cron = "30 37 17 * * ?")
     public void generateDailyReplenishmentQueue() {
         log.info("Starting scheduled hourly replenishment queue generation");
         try {

@@ -14,6 +14,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -26,14 +27,13 @@ public class BufferStatusUpdateScheduler {
     private final InventoryBufferRepository inventoryBufferRepository;
     private final InventoryOrderPipelineRepository inventoryOrderPipelineRepository;
     private final DailyConsumptionLogRepository dailyConsumptionLogRepository;
+
     // Run every hour during business hours (9 AM to 6 PM)
-    @Scheduled(cron = "0 0 9-18 * * MON-FRI")
+    @Scheduled(cron = "30 37 17 * * MON-FRI")
     @Transactional
     public void updateBufferStatusForAllLocations() {
         log.info("Starting scheduled buffer status update for all locations");
-
         try {
-            // Get all unique location IDs from active buffers
             Set<String> locationIds = getAllActiveLocationIds();
             log.info("Found {} unique locations with active buffers", locationIds.size());
 
@@ -50,7 +50,6 @@ public class BufferStatusUpdateScheduler {
 
                     log.info("Location {}: Processed={}, Updated={}, Errors={}",
                             locationId, result.getProcessedCount(), result.getUpdatedCount(), result.getErrorCount());
-
                 } catch (Exception e) {
                     log.error("Failed to update buffer status for location: {}, error: {}", locationId, e.getMessage(), e);
                     totalErrors++;
@@ -59,7 +58,6 @@ public class BufferStatusUpdateScheduler {
 
             log.info("Completed scheduled buffer status update - Total Processed: {}, Updated: {}, Errors: {}",
                     totalProcessed, totalUpdated, totalErrors);
-
         } catch (Exception e) {
             log.error("Error in scheduled buffer status update: {}", e.getMessage(), e);
         }
@@ -70,18 +68,14 @@ public class BufferStatusUpdateScheduler {
     @Transactional(readOnly = true)
     public void monitorCriticalBuffers() {
         log.info("Starting critical buffer monitoring");
-
         try {
-            // Find buffers in RED and CRITICAL zones
             List<String> criticalZones = Arrays.asList("RED", "CRITICAL");
-            Pageable pageable = PageRequest.of(0, 1000); // Process in batches
-
+            Pageable pageable = PageRequest.of(0, 1000);
             Page<InventoryBuffer> criticalBuffers = inventoryBufferRepository.findByCurrentZoneIn(criticalZones, pageable);
 
             if (criticalBuffers.hasContent()) {
                 log.warn("Found {} critical buffers requiring attention", criticalBuffers.getTotalElements());
 
-                // Group by location for better reporting
                 Map<String, List<InventoryBuffer>> buffersByLocation = criticalBuffers.getContent()
                         .stream()
                         .collect(Collectors.groupingBy(InventoryBuffer::getLocationId));
@@ -92,38 +86,20 @@ public class BufferStatusUpdateScheduler {
                             buffers.size(),
                             buffers.stream().map(InventoryBuffer::getProductId).collect(Collectors.toList()));
                 });
-
-                // Here you could send alerts, notifications, or trigger automated replenishment
-                // For example: alertService.sendCriticalBufferAlert(criticalBuffers);
             } else {
                 log.info("No critical buffers found - all buffers are in healthy zones");
             }
-
         } catch (Exception e) {
             log.error("Error in critical buffer monitoring: {}", e.getMessage(), e);
         }
     }
 
-    /**
-     * Update buffer status for a specific location
-     */
     @Transactional
     public BufferUpdateResult updateBufferStatusForLocation(String locationId) {
         log.info("Updating buffer status for location: {}", locationId);
         BufferUpdateResult result = new BufferUpdateResult();
 
         try {
-            // DEBUG: First check if any documents exist for this location
-            Page<InventoryBuffer> allBuffersForLocation = inventoryBufferRepository
-                    .findAllByLocationIdDebug(locationId, PageRequest.of(0, 1000));
-            log.debug("DEBUG: Found {} total buffers for location: {} (ignoring is_active)",
-                    allBuffersForLocation.getContent().size(), locationId);
-
-            // DEBUG: Log the is_active values
-            allBuffersForLocation.getContent().forEach(buffer ->
-                    log.debug("DEBUG: Buffer {}, isActive: {}", buffer.getBufferId(), buffer.getIsActive()));
-
-            // Original query
             Page<InventoryBuffer> buffersPage = inventoryBufferRepository
                     .findActiveBuffersByLocationId(locationId, PageRequest.of(0, 1000));
             List<InventoryBuffer> buffers = buffersPage.getContent();
@@ -135,14 +111,10 @@ public class BufferStatusUpdateScheduler {
                 return result;
             }
 
-            // Log buffer IDs for debugging
-            buffers.forEach(buffer -> log.debug("Processing buffer: {}, product: {}, isActive: {}",
-                    buffer.getBufferId(), buffer.getProductId(), buffer.getIsActive()));
-
-            // Step 2: Get pipeline quantities for all products at this location
+            // Get pipeline quantities for all products at this location
             Map<String, Integer> pipelineQuantities = calculatePipelineQuantities(locationId);
 
-            // Step 3: Process each buffer
+            // Process each buffer
             for (InventoryBuffer buffer : buffers) {
                 try {
                     boolean updated = updateBufferMetrics(buffer, pipelineQuantities);
@@ -158,7 +130,6 @@ public class BufferStatusUpdateScheduler {
 
             log.info("Completed buffer status update for location: {} - Processed: {}, Updated: {}, Errors: {}",
                     locationId, result.getProcessedCount(), result.getUpdatedCount(), result.getErrorCount());
-
         } catch (Exception e) {
             log.error("Error updating buffer status for location {}: {}", locationId, e.getMessage(), e);
             result.incrementError();
@@ -167,22 +138,14 @@ public class BufferStatusUpdateScheduler {
         return result;
     }
 
-
-
-    /**
-     * Calculate pipeline quantities for all products at a location
-     */
     private Map<String, Integer> calculatePipelineQuantities(String locationId) {
         log.debug("Starting pipeline calculation for location: {}", locationId);
-
-
-        List<String> pipelineStatuses = Arrays.asList("CONFIRMED", "SHIPPED", "IN_TRANSIT");
+        List<String> pipelineStatuses = Arrays.asList("CONFIRMED", "SHIPPED", "IN_TRANSIT","PROCESSED");
         Map<String, Integer> pipelineQuantities = new HashMap<>();
 
         for (String status : pipelineStatuses) {
             try {
                 log.debug("Checking pipeline orders with status: {} for location: {}", status, locationId);
-
                 Page<InventoryOrderPipeline> ordersPage = inventoryOrderPipelineRepository
                         .findByStatusAndLocationId(status, locationId, PageRequest.of(0, 1000));
 
@@ -193,15 +156,12 @@ public class BufferStatusUpdateScheduler {
                     String productId = order.getProductId();
                     Integer pendingQty = order.getPendingQty() != null ? order.getPendingQty() : 0;
 
-                    // CORRECTED: Only add positive quantities to pipeline
                     if (pendingQty > 0) {
                         pipelineQuantities.merge(productId, pendingQty, Integer::sum);
-
                         log.debug("Added to pipeline - Order: {}, Product: {}, Qty: {}, Total for product: {}",
                                 order.getOrderId(), productId, pendingQty, pipelineQuantities.get(productId));
                     }
                 });
-
             } catch (Exception e) {
                 log.error("Error calculating pipeline quantities for status {} at location {}: {}",
                         status, locationId, e.getMessage(), e);
@@ -212,185 +172,164 @@ public class BufferStatusUpdateScheduler {
         return pipelineQuantities;
     }
 
-
     /**
-     * Update metrics for a single buffer
-     */
-    /**
-     * Update metrics for a single buffer
+     * Update metrics for a single buffer with corrected inventory calculation
      */
     private boolean updateBufferMetrics(InventoryBuffer buffer, Map<String, Integer> pipelineQuantities) {
-        String productId = buffer.getProductId();
-        Integer pipelineQty = pipelineQuantities.getOrDefault(productId, 0);
-
-        log.debug("Starting buffer metrics update for buffer: {}, product: {}",
-                buffer.getBufferId(), productId);
-
-        // Get current_inventory from daily_consumption_log or warehouse data
-        Integer currentInventory = getCurrentInventory(buffer);
-        if (currentInventory == null || currentInventory < 0) {
-            log.warn("Invalid current_inventory for buffer {}: {}. Using 0.", buffer.getBufferId(), currentInventory);
-            currentInventory = 0;
-        }
-
-        // Store original values for comparison
-        String originalZone = buffer.getCurrentZone();
-        Integer originalConsecutiveDays = buffer.getConsecutiveZoneDays() != null ? buffer.getConsecutiveZoneDays() : 0;
-        Integer originalPipelineQty = buffer.getInPipelineQty();
-        Integer originalNetAvailableQty = buffer.getNetAvailableQty();
-        Double originalBufferConsumedPct = buffer.getBufferConsumedPct();
-
-        log.debug("Original values for buffer {}: pipeline_qty={}, net_available_qty={}, buffer_consumed_pct={}",
-                buffer.getBufferId(), originalPipelineQty, originalNetAvailableQty, originalBufferConsumedPct);
-
-        // Update pipeline quantity
-        buffer.setInPipelineQty(pipelineQty);
-        log.debug("Updated in_pipeline_qty for buffer {}: {} -> {}",
-                buffer.getBufferId(), originalPipelineQty, pipelineQty);
-
-        // Calculate net available quantity
-        Integer netAvailableQty = currentInventory + pipelineQty;
-        buffer.setNetAvailableQty(netAvailableQty);
-        log.debug("Updated net_available_qty for buffer {}: {} -> {} (current_inventory: {} + in_pipeline_qty: {})",
-                buffer.getBufferId(), originalNetAvailableQty, netAvailableQty, currentInventory, pipelineQty);
-
-        // Calculate buffer consumed percentage
-        Double bufferConsumedPct = calculateBufferConsumedPct(buffer, netAvailableQty);
-        buffer.setBufferConsumedPct(bufferConsumedPct);
-
-        // Fix the log formatting - use String.format instead of log placeholders for percentage
-        double originalPct = originalBufferConsumedPct != null ? originalBufferConsumedPct : 0.0;
-        log.debug("Updated buffer_consumed_pct for buffer {}: {}% -> {}%",
-                buffer.getBufferId(),
-                String.format("%.2f", originalPct),
-                String.format("%.2f", bufferConsumedPct));
-
-        // Determine current zone
-        String newZone = determineBufferZone(buffer, bufferConsumedPct);
-        buffer.setCurrentZone(newZone);
-
-        // Update consecutive zone days
-        updateConsecutiveZoneDays(buffer, originalZone, newZone, originalConsecutiveDays);
-
-        // Update timestamp
-        buffer.setUpdatedAt(LocalDateTime.now());
-        buffer.setUpdatedBy("SYSTEM_SCHEDULER");
-
-        // Save the updated buffer
-        try {
-            log.debug("Saving buffer {} with updated values...", buffer.getBufferId());
-            InventoryBuffer savedBuffer = inventoryBufferRepository.save(buffer);
-
-            // Fix the log formatting here too
-            log.info("Successfully saved buffer {}: in_pipeline_qty={}, net_available_qty={}, buffer_consumed_pct={}%, current_zone={}",
-                    savedBuffer.getBufferId(),
-                    savedBuffer.getInPipelineQty(),
-                    savedBuffer.getNetAvailableQty(),
-                    String.format("%.2f", savedBuffer.getBufferConsumedPct()),
-                    savedBuffer.getCurrentZone());
-
-            // Verify the save worked by checking what was actually saved
-            Optional<InventoryBuffer> verifyBuffer = inventoryBufferRepository.findById(savedBuffer.getId());
-            if (verifyBuffer.isPresent()) {
-                InventoryBuffer verified = verifyBuffer.get();
-                log.debug("Verification - Buffer {} saved values: in_pipeline_qty={}, net_available_qty={}, buffer_consumed_pct={}%",
-                        verified.getBufferId(),
-                        verified.getInPipelineQty(),
-                        verified.getNetAvailableQty(),
-                        String.format("%.2f", verified.getBufferConsumedPct()));
-            }
-
-        } catch (Exception e) {
-            log.error("Failed to save buffer {}: {}", buffer.getBufferId(), e.getMessage(), e);
-            return false;
-        }
-
-        // Log significant changes
-        if (!Objects.equals(originalZone, newZone)) {
-            log.info("Buffer zone changed - Buffer: {}, Product: {}, Location: {}, {} -> {}, Consumed: {}%",
-                    buffer.getBufferId(), productId, buffer.getLocationId(),
-                    originalZone, newZone, String.format("%.1f", bufferConsumedPct));
-        }
-
-        return true; // Indicate that update was performed
-    }
-
-
-    /**
-     * Get current inventory from daily_consumption_log or warehouse data
-     */
-    private Integer getCurrentInventory(InventoryBuffer buffer) {
         String productId = buffer.getProductId();
         String locationId = buffer.getLocationId();
         String bufferId = buffer.getBufferId();
 
-        // Get base inventory from buffer (this should be the initial/last known inventory)
-        Integer baseInventory = buffer.getCurrentInventory();
-        if (baseInventory == null) {
-            log.warn("No base current_inventory found for buffer {}. Using 0.", bufferId);
-            baseInventory = 0;
+        log.debug("Starting buffer metrics update for buffer: {}, product: {}", bufferId, productId);
+
+        try {
+            // Store original values for comparison
+            String originalZone = buffer.getCurrentZone();
+            Integer originalConsecutiveDays = buffer.getConsecutiveZoneDays() != null ? buffer.getConsecutiveZoneDays() : 0;
+            Integer originalPipelineQty = buffer.getInPipelineQty();
+            Integer originalCurrentInventory = buffer.getCurrentInventory();
+            Integer originalNetAvailableQty = buffer.getNetAvailableQty();
+            Double originalBufferConsumedPct = buffer.getBufferConsumedPct();
+
+            // STEP 1: Calculate current inventory = buffer_units - yesterday's consumption
+            Integer currentInventory = calculateCurrentInventory(buffer);
+            buffer.setCurrentInventory(currentInventory);
+
+            log.debug("Updated current_inventory for buffer {}: {} -> {} (buffer_units - yesterday's consumption)",
+                    bufferId, originalCurrentInventory, currentInventory);
+
+            // STEP 2: Get pipeline quantity for this product
+            Integer pipelineQty = pipelineQuantities.getOrDefault(productId, 0);
+            buffer.setInPipelineQty(pipelineQty);
+
+            log.debug("Updated in_pipeline_qty for buffer {}: {} -> {}",
+                    bufferId, originalPipelineQty, pipelineQty);
+
+            // STEP 3: Calculate net available quantity = current_inventory + pipeline_qty
+            Integer netAvailableQty = currentInventory + pipelineQty;
+            buffer.setNetAvailableQty(netAvailableQty);
+
+            log.debug("Updated net_available_qty for buffer {}: {} -> {} (current_inventory: {} + pipeline_qty: {})",
+                    bufferId, originalNetAvailableQty, netAvailableQty, currentInventory, pipelineQty);
+
+            // STEP 4: Calculate buffer consumed percentage
+            Double bufferConsumedPct = calculateBufferConsumedPercentage(buffer, netAvailableQty);
+            buffer.setBufferConsumedPct(bufferConsumedPct);
+
+            log.debug("Updated buffer_consumed_pct for buffer {}: {}% -> {}%",
+                    bufferId,
+                    originalBufferConsumedPct != null ? String.format("%.2f", originalBufferConsumedPct) : "null",
+                    String.format("%.2f", bufferConsumedPct));
+
+            // STEP 5: Determine current zone based on consumed percentage
+            String newZone = determineBufferZone(buffer, bufferConsumedPct);
+            buffer.setCurrentZone(newZone);
+
+            // STEP 6: Update consecutive zone days
+            updateConsecutiveZoneDays(buffer, originalZone, newZone, originalConsecutiveDays);
+
+            // STEP 7: Update timestamps
+            buffer.setUpdatedAt(LocalDateTime.now());
+
+            // STEP 8: Save the buffer
+            inventoryBufferRepository.save(buffer);
+
+            // Check if any significant changes occurred
+            boolean hasSignificantChanges = !Objects.equals(originalZone, newZone) ||
+                    !Objects.equals(originalCurrentInventory, currentInventory) ||
+                    !Objects.equals(originalPipelineQty, pipelineQty) ||
+                    Math.abs((originalBufferConsumedPct != null ? originalBufferConsumedPct : 0.0) - bufferConsumedPct) > 1.0;
+
+            if (hasSignificantChanges) {
+                log.info("Buffer {} updated - Zone: {} -> {}, Current Inventory: {} -> {}, Pipeline: {} -> {}, Consumed: {}% -> {}%",
+                        bufferId, originalZone, newZone, originalCurrentInventory, currentInventory,
+                        originalPipelineQty, pipelineQty,
+                        originalBufferConsumedPct != null ? String.format("%.2f", originalBufferConsumedPct) : "null",
+                        String.format("%.2f", bufferConsumedPct));
+            }
+
+            return hasSignificantChanges;
+
+        } catch (Exception e) {
+            log.error("Error updating buffer metrics for buffer {}: {}", bufferId, e.getMessage(), e);
+            throw e;
         }
-
-        // Query daily_consumption_log for consumption since last update
-        // CORRECTED: Should get consumption since last buffer update, not arbitrary 30 days
-        LocalDateTime lastUpdate = buffer.getUpdatedAt() != null ? buffer.getUpdatedAt() : LocalDateTime.now().minusDays(1);
-
-        log.debug("Querying consumption data for buffer {} since last update: {}", bufferId, lastUpdate);
-
-        Integer consumedSinceLastUpdate = dailyConsumptionLogRepository.sumQuantityConsumed(productId, locationId, lastUpdate);
-        if (consumedSinceLastUpdate == null) {
-            consumedSinceLastUpdate = 0;
-        }
-
-        // CORRECTED FORMULA: Current Inventory = Base Inventory - Consumed Quantity
-        // (consumption should reduce available inventory)
-        int currentInventory = baseInventory - consumedSinceLastUpdate;
-
-        // Ensure non-negative inventory
-        if (currentInventory < 0) {
-            log.warn("Negative inventory calculated for buffer {}: {}. Setting to 0.", bufferId, currentInventory);
-            currentInventory = 0;
-        }
-
-        log.debug("Calculated current_inventory for buffer {}: base={}, consumed_since_update={}, current={}",
-                bufferId, baseInventory, consumedSinceLastUpdate, currentInventory);
-
-        return currentInventory;
     }
 
+    /**
+     * Calculate current inventory = buffer_units - yesterday's consumption
+     */
+    private Integer calculateCurrentInventory(InventoryBuffer buffer) {
+        String productId = buffer.getProductId();
+        String locationId = buffer.getLocationId();
+        Integer bufferUnits = buffer.getBufferUnits() != null ? buffer.getBufferUnits() : 0;
+
+        try {
+            // Get yesterday's date range
+            LocalDate yesterday = LocalDate.now().minusDays(1);
+            LocalDateTime startOfYesterday = yesterday.atStartOfDay();
+            LocalDateTime endOfYesterday = yesterday.atTime(23, 59, 59);
+
+            log.debug("Calculating yesterday's consumption for product {} at location {} between {} and {}",
+                    productId, locationId, startOfYesterday, endOfYesterday);
+
+            // Get yesterday's consumption using the fixed repository method
+            Optional<Integer> consumptionOpt = dailyConsumptionLogRepository
+                    .sumQuantityConsumedBetweenDates(productId, locationId, startOfYesterday, endOfYesterday);
+
+            Integer yesterdayConsumption = consumptionOpt.orElse(0);
+
+            log.debug("Yesterday's consumption for product {} at location {}: {}",
+                    productId, locationId, yesterdayConsumption);
+
+            // Calculate current inventory = buffer_units - yesterday's consumption
+            Integer currentInventory = bufferUnits - yesterdayConsumption;
+
+            // Ensure current inventory is not negative
+            currentInventory = Math.max(0, currentInventory);
+
+            log.debug("Current inventory calculation for buffer {}: buffer_units({}) - yesterday_consumption({}) = {}",
+                    buffer.getBufferId(), bufferUnits, yesterdayConsumption, currentInventory);
+
+            return currentInventory;
+
+        } catch (Exception e) {
+            log.error("Error calculating current inventory for buffer {}: {}", buffer.getBufferId(), e.getMessage(), e);
+            // Return buffer units as fallback if consumption calculation fails
+            return bufferUnits;
+        }
+    }
 
     /**
-     * Calculate buffer consumed percentage
+     * Calculate buffer consumed percentage based on net available quantity
      */
-    private Double calculateBufferConsumedPct(InventoryBuffer buffer, Integer netAvailableQty) {
-        Integer bufferUnits = buffer.getBufferUnits();
+    private Double calculateBufferConsumedPercentage(InventoryBuffer buffer, Integer netAvailableQty) {
+        Integer bufferUnits = buffer.getBufferUnits() != null ? buffer.getBufferUnits() : 0;
+        String bufferId = buffer.getBufferId();
 
-        if (bufferUnits == null || bufferUnits <= 0) {
-            log.warn("Invalid buffer units for buffer {}: {}", buffer.getBufferId(), bufferUnits);
-            return 100.0; // If no buffer defined, consider it fully consumed
+        if (bufferUnits <= 0) {
+            log.warn("Buffer {} has zero or negative buffer_units: {}", bufferId, bufferUnits);
+            return 0.0;
         }
 
-        // CORRECTED FORMULA:
-        // Buffer Consumed % = ((Buffer Units - Net Available Qty) / Buffer Units) * 100
-        // This gives percentage of buffer that has been used up
+        Double consumedPct;
 
-        double consumedPct;
         if (netAvailableQty >= bufferUnits) {
-            // If we have more than buffer units, buffer is not consumed at all
+            // If net available quantity exceeds buffer units, nothing is consumed (0% consumed)
             consumedPct = 0.0;
         } else if (netAvailableQty <= 0) {
-            // If no inventory available, buffer is fully consumed
+            // If no inventory available, buffer is fully consumed (100% consumed)
             consumedPct = 100.0;
         } else {
-            // Calculate the percentage of buffer consumed
+            // Calculate percentage consumed: (buffer_units - net_available_qty) / buffer_units * 100
             consumedPct = ((double)(bufferUnits - netAvailableQty) / bufferUnits) * 100.0;
         }
 
         // Ensure percentage is between 0 and 100
         consumedPct = Math.max(0.0, Math.min(100.0, consumedPct));
 
-        log.debug("Buffer consumed calculation for buffer {}: bufferUnits={}, netAvailableQty={}, consumedPct={}%",
-                buffer.getBufferId(), bufferUnits, netAvailableQty, String.format("%.2f", consumedPct));
+        log.debug("Buffer consumed calculation for buffer {}: buffer_units={}, net_available_qty={}, consumed_pct={}%",
+                bufferId, bufferUnits, netAvailableQty, String.format("%.2f", consumedPct));
 
         return consumedPct;
     }
@@ -399,14 +338,13 @@ public class BufferStatusUpdateScheduler {
      * Determine buffer zone based on consumed percentage and thresholds
      */
     private String determineBufferZone(InventoryBuffer buffer, Double bufferConsumedPct) {
-        Double redThreshold = buffer.getRedThresholdPct() != null ? buffer.getRedThresholdPct() : 33.0;
-        Double yellowThreshold = buffer.getYellowThresholdPct() != null ? buffer.getYellowThresholdPct() : 33.0;
+        Double redThreshold = buffer.getRedThresholdPct() != null ? buffer.getRedThresholdPct() : 80.0;
+        Double yellowThreshold = buffer.getYellowThresholdPct() != null ? buffer.getYellowThresholdPct() : 50.0;
 
-        // LOGIC: Higher consumed percentage means more critical
-        // RED = Most critical (high consumption)
-        // YELLOW = Warning (moderate consumption)
-        // GREEN = Safe (low consumption)
+        log.debug("Determining zone for buffer {}: consumed_pct={}%, red_threshold={}%, yellow_threshold={}%",
+                buffer.getBufferId(), String.format("%.2f", bufferConsumedPct), redThreshold, yellowThreshold);
 
+        // Higher consumed percentage means more critical
         if (bufferConsumedPct >= redThreshold) {
             return "RED";       // Critical: Buffer is highly consumed
         } else if (bufferConsumedPct >= yellowThreshold) {
@@ -421,9 +359,8 @@ public class BufferStatusUpdateScheduler {
      */
     private void updateConsecutiveZoneDays(InventoryBuffer buffer, String originalZone,
                                            String newZone, Integer originalConsecutiveDays) {
-
-        // CORRECTED: Handle null original zone (first time update)
         if (originalZone == null) {
+            // First time zone assignment
             buffer.setConsecutiveZoneDays(1);
             log.debug("First zone assignment for buffer {}: {} (consecutive days = 1)",
                     buffer.getBufferId(), newZone);
@@ -448,14 +385,19 @@ public class BufferStatusUpdateScheduler {
      * Get all unique location IDs that have active buffers
      */
     private Set<String> getAllActiveLocationIds() {
-        Page<InventoryBuffer> activeBuffers = inventoryBufferRepository.findActiveBuffers(PageRequest.of(0, 10000));
+        try {
+            Page<InventoryBuffer> activeBuffers = inventoryBufferRepository.findActiveBuffers(PageRequest.of(0, 10000));
+            Set<String> locationIds = activeBuffers.getContent().stream()
+                    .map(InventoryBuffer::getLocationId)
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toSet());
 
-        Set<String> locationIds = activeBuffers.getContent().stream()
-                .map(InventoryBuffer::getLocationId)
-                .collect(Collectors.toSet());
-
-        log.debug("Active location IDs: {}", locationIds);
-        return locationIds;
+            log.debug("Active location IDs: {}", locationIds);
+            return locationIds;
+        } catch (Exception e) {
+            log.error("Error getting active location IDs: {}", e.getMessage(), e);
+            return new HashSet<>();
+        }
     }
 
     /**
@@ -475,3 +417,4 @@ public class BufferStatusUpdateScheduler {
         public int getErrorCount() { return errorCount; }
     }
 }
+
