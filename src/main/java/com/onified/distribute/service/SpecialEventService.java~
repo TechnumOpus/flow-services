@@ -9,6 +9,7 @@ import java.util.List;
 
 public interface SpecialEventService {
     SpecialEventDTO createSpecialEvent(SpecialEventDTO eventDto);
+    SpecialEventDTO updateSpecialEvent(String eventId, SpecialEventDTO eventDto);
     SpecialEventDTO getSpecialEventById(String eventId);
     Page<SpecialEventDTO> getAllSpecialEvents(Pageable pageable);
     Page<SpecialEventDTO> getActiveSpecialEvents(Pageable pageable);
@@ -23,10 +24,4 @@ public interface SpecialEventService {
     SpecialEventDTO activateSpecialEvent(String eventId);
     SpecialEventDTO deactivateSpecialEvent(String eventId);
     void deleteSpecialEvent(String eventId);
-    SpecialEventDTO updateSpecialEvent(String eventId, SpecialEventDTO eventDto);
-    SpecialEventDTO createEvent(SpecialEventDTO eventDto);
-    SpecialEventDTO updateEvent(String eventId, SpecialEventDTO eventDto);
-    void deleteEvent(String eventId);
-    Page<SpecialEventDTO> getEvents(String category, String locationId, LocalDateTime startDate, LocalDateTime endDate, Boolean isActive, Pageable pageable);
-    Page<SpecialEventDTO> getEventsByCalendar(Integer month, Integer year, Pageable pageable);
 }

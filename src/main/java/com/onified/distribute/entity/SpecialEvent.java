@@ -6,6 +6,7 @@ import org.springframework.data.mongodb.core.index.CompoundIndex;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @Document(collection = "special_events")
@@ -36,4 +37,6 @@ public class SpecialEvent {
     private LocalDateTime updatedAt;
     private String createdBy;
     private String approvedBy;
+
+    private List<String> affectedSkus;
 }

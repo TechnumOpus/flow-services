@@ -9,7 +9,6 @@ public class SeasonalityAdjustmentDTO {
     private String adjustmentId;
     private String productId;
     private String locationId;
-    private String category;
     private Integer month;
     private Double seasonalityFactor;
     private Integer year;

@@ -2,6 +2,8 @@ package com.onified.distribute.controller;
 
 import com.onified.distribute.dto.SpecialEventDTO;
 import com.onified.distribute.service.SpecialEventService;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -13,6 +15,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -106,7 +109,7 @@ public class SpecialEventController {
             @RequestParam String locationId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate) {
-        log.info("Fetching overlapping events for product: {} at location: {} between {} and {}", 
+        log.info("Fetching overlapping events for product: {} at location: {} between {} and {}",
                 productId, locationId, startDate, endDate);
         List<SpecialEventDTO> events = specialEventService.getOverlappingEvents(productId, locationId, startDate, endDate);
         return ResponseEntity.ok(events);
@@ -118,7 +121,7 @@ public class SpecialEventController {
             @PathVariable String locationId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime date) {
         LocalDateTime searchDate = date != null ? date : LocalDateTime.now();
-        log.info("Fetching event impact factor for product: {} at location: {} for date: {}", 
+        log.info("Fetching event impact factor for product: {} at location: {} for date: {}",
                 productId, locationId, searchDate);
         Double impactFactor = specialEventService.getEventImpactFactor(productId, locationId, searchDate);
         return ResponseEntity.ok(impactFactor);
@@ -161,5 +164,52 @@ public class SpecialEventController {
         log.info("Deleting special event: {}", eventId);
         specialEventService.deleteSpecialEvent(eventId);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/events")
+    public ResponseEntity<SpecialEventDTO> createEvent(@Valid @RequestBody SpecialEventDTO eventDto) {
+        log.info("Creating event: {}", eventDto.getEventName());
+        SpecialEventDTO createdEvent = specialEventService.createEvent(eventDto);
+        return new ResponseEntity<>(createdEvent, HttpStatus.CREATED);
+    }
+
+    @PutMapping("/events/{eventId}")
+    public ResponseEntity<SpecialEventDTO> updateEvent(
+            @PathVariable String eventId,
+            @Valid @RequestBody SpecialEventDTO eventDto) {
+        log.info("Updating event: {}", eventId);
+        SpecialEventDTO updatedEvent = specialEventService.updateEvent(eventId, eventDto);
+        return ResponseEntity.ok(updatedEvent);
+    }
+
+    @DeleteMapping("/events/{eventId}")
+    public ResponseEntity<Void> deleteEvent(@PathVariable String eventId) {
+        log.info("Deleting event: {}", eventId);
+        specialEventService.deleteEvent(eventId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/events")
+    public ResponseEntity<Page<SpecialEventDTO>> getEvents(
+            @RequestParam(required = false) String category,
+            @RequestParam(required = false) String locationId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDateTime startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDateTime endDate,
+            @RequestParam(required = false) Boolean isActive,
+            Pageable pageable) {
+        log.info("Fetching events with filters: category={}, locationId={}, startDate={}, endDate={}, isActive={}",
+                category, locationId, startDate, endDate, isActive);
+        Page<SpecialEventDTO> events = specialEventService.getEvents(category, locationId, startDate, endDate, isActive, pageable);
+        return ResponseEntity.ok(events);
+    }
+
+    @GetMapping("/events/calendar")
+    public ResponseEntity<Page<SpecialEventDTO>> getEventsByCalendar(
+            @RequestParam @Min(1) @Max(12) Integer month,
+            @RequestParam Integer year,
+            Pageable pageable) {
+        log.info("Fetching events for month: {} and year: {}", month, year);
+        Page<SpecialEventDTO> events = specialEventService.getEventsByCalendar(month, year, pageable);
+        return ResponseEntity.ok(events);
     }
 }

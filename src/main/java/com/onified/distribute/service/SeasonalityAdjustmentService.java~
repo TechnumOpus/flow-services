@@ -1,7 +1,6 @@
 package com.onified.distribute.service;
 
 import com.onified.distribute.dto.SeasonalityAdjustmentDTO;
-import com.onified.distribute.dto.SeasonalityMatrixResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -22,5 +21,16 @@ public interface SeasonalityAdjustmentService {
     void deleteSeasonalityAdjustment(String adjustmentId);
     SeasonalityAdjustmentDTO updateSeasonalityAdjustment(String adjustmentId, SeasonalityAdjustmentDTO adjustmentDto);
     List<SeasonalityAdjustmentDTO> updateSeasonalityBulk(List<SeasonalityAdjustmentDTO> adjustments);
-    SeasonalityMatrixResponse getSeasonalityMatrix(String type, String locationId, String category, String productId, String entityFilter, Integer year, Boolean isActive);
+    Page<SeasonalityAdjustmentDTO> getSeasonalityMatrix(
+            String type,
+            String locationId,
+            String category,
+            String productId,
+            String entityFilter,
+            Integer year,
+            Boolean isActive,
+            Pageable pageable
+    );
+
+
 }

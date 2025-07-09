@@ -41,11 +41,6 @@ public interface SpecialEventRepository extends MongoRepository<SpecialEvent, St
     List<SpecialEvent> findOverlappingEvents(String productId, String locationId, LocalDateTime startDate, LocalDateTime endDate);
     
     List<SpecialEvent> findByProductIdAndLocationId(String productId, String locationId);
-
-    @Query("{ 'category': { $in: [ null, ?0 ] }, 'locationId': { $in: [ null, ?1 ] }, 'startDate': { $gte: ?2, $exists: true }, 'endDate': { $lte: ?3, $exists: true }, 'isActive': { $in: [ null, ?4 ] } }")
-    Page<SpecialEvent> findEvents(String category, String locationId, LocalDateTime startDate, LocalDateTime endDate, Boolean isActive, Pageable pageable);
-
-    @Query("{ $expr: { $and: [ { $eq: [ { $month: '$startDate' }, ?0 ] }, { $eq: [ { $year: '$startDate' }, ?1 ] } ] } }")
-    Page<SpecialEvent> findEventsByCalendar(Integer month, Integer year, Pageable pageable);
+    
 
 }

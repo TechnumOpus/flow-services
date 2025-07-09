@@ -1,6 +1,7 @@
 package com.onified.distribute.controller;
 
 import com.onified.distribute.dto.SeasonalityAdjustmentDTO;
+import com.onified.distribute.dto.SeasonalityMatrixResponseDTO;
 import com.onified.distribute.service.SeasonalityAdjustmentService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -111,5 +112,29 @@ public class SeasonalityAdjustmentController {
         log.info("Deleting seasonality adjustment: {}", adjustmentId);
         seasonalityAdjustmentService.deleteSeasonalityAdjustment(adjustmentId);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/matrix")
+    public ResponseEntity<Page<SeasonalityMatrixResponseDTO>> getSeasonalityMatrix(
+            @RequestParam(defaultValue = "ALL") String type,
+            @RequestParam(required = false) String locationId,
+            @RequestParam(required = false) String category,
+            @RequestParam(required = false) String productId,
+            @RequestParam(defaultValue = "2025") Integer year,
+            @RequestParam(defaultValue = "true") Boolean isActive,
+            Pageable pageable) {
+        log.info("Fetching seasonality matrix with filters: type={}, locationId={}, category={}, productId={}, year={}, isActive={}",
+                type, locationId, category, productId, year, isActive);
+        Page<SeasonalityMatrixResponseDTO> adjustments = seasonalityAdjustmentService.getSeasonalityMatrix(
+                type, locationId, category, productId, year, isActive, pageable);
+        return ResponseEntity.ok(adjustments);
+    }
+
+    @PostMapping("/bulk")
+    public ResponseEntity<List<SeasonalityAdjustmentDTO>> updateSeasonalityBulk(
+            @Valid @RequestBody List<SeasonalityAdjustmentDTO> adjustments) {
+        log.info("Updating seasonality adjustments in bulk for {} entries", adjustments.size());
+        List<SeasonalityAdjustmentDTO> updatedAdjustments = seasonalityAdjustmentService.updateSeasonalityBulk(adjustments);
+        return new ResponseEntity<>(updatedAdjustments, HttpStatus.OK);
     }
 }
