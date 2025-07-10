@@ -1,9 +1,11 @@
 package com.onified.distribute.dto;
 
+import lombok.Builder;
 import lombok.Data;
 import java.time.LocalDateTime;
 
 @Data
+@Builder
 public class ReviewCycleDTO {
     private String id;
     private String cycleId;

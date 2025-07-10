@@ -222,7 +222,7 @@ public class ReviewCycleServiceImpl implements ReviewCycleService {
     }
 
     private ReviewCycleDTO mapToDto(ReviewCycle entity) {
-        ReviewCycleDTO dto = ReviewCycleDTO.builder().build();
+        ReviewCycleDTO dto = new ReviewCycleDTO();
         dto.setId(entity.getId());
         dto.setCycleId(entity.getCycleId());
         dto.setCycleName(entity.getCycleName());

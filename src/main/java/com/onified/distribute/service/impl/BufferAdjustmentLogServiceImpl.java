@@ -153,8 +153,8 @@ public class BufferAdjustmentLogServiceImpl implements BufferAdjustmentLogServic
     public BufferAdjustmentLogDTO logBufferAdjustment(String bufferId, String adjustmentType, Integer oldBufferDays,
                                                       Integer newBufferDays, String triggerReason, String createdBy) {
         log.info("Logging buffer adjustment for buffer: {} with type: {}", bufferId, adjustmentType);
-        
-        BufferAdjustmentLogDTO logDto = new BufferAdjustmentLogDTO();
+
+        BufferAdjustmentLogDTO logDto = BufferAdjustmentLogDTO.builder().build();
         logDto.setBufferId(bufferId);
         logDto.setAdjustmentType(adjustmentType);
         logDto.setTriggerReason(triggerReason);
@@ -183,7 +183,7 @@ public class BufferAdjustmentLogServiceImpl implements BufferAdjustmentLogServic
     }
 
     private BufferAdjustmentLogDTO convertToDto(BufferAdjustmentLog adjustmentLog) {
-        BufferAdjustmentLogDTO dto = new BufferAdjustmentLogDTO();
+        BufferAdjustmentLogDTO dto = BufferAdjustmentLogDTO.builder().build();
         dto.setLogId(adjustmentLog.getLogId());
         dto.setBufferId(adjustmentLog.getBufferId());
         dto.setProductId(adjustmentLog.getProductId());

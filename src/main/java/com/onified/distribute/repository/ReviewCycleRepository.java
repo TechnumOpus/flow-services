@@ -25,4 +25,6 @@ public interface ReviewCycleRepository extends MongoRepository<ReviewCycle, Stri
     @Query("{'nextReviewDate': {$gte: ?0}, 'isActive': true}")
     List<ReviewCycle> findUpcomingReviewCycles(LocalDateTime date);
 
+    List<ReviewCycle> findByIsActiveTrue();
+
 }

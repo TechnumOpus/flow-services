@@ -29,7 +29,6 @@ public class DynamicBufferController {
 
     private final BufferCalculationService bufferCalculationService;
     private final BufferReviewService bufferReviewService;
-
     @GetMapping("/review")
     public ResponseEntity<Page<BufferReviewDTO>> getBufferReviewData(
             @RequestParam(required = false) String productId,

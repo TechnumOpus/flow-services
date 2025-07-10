@@ -44,23 +44,9 @@ public class InventoryBufferController {
         return new ResponseEntity<>(createdBuffer, HttpStatus.CREATED);
     }
 
-    @PutMapping("/{bufferId}")
-    public ResponseEntity<InventoryBufferDTO> updateInventoryBuffer(
-            @PathVariable String bufferId,
-            @Valid @RequestBody InventoryBufferDTO bufferDto) {
-        log.info("Updating inventory buffer: {}", bufferId);
+   
 
-        InventoryBufferDTO updatedBuffer = inventoryBufferService.updateInventoryBuffer(bufferId, bufferDto);
-        return ResponseEntity.ok(updatedBuffer);
-    }
 
-    @GetMapping("/{bufferId}")
-    public ResponseEntity<InventoryBufferDTO> getInventoryBufferById(@PathVariable String bufferId) {
-        log.info("Fetching inventory buffer: {}", bufferId);
-
-        InventoryBufferDTO buffer = inventoryBufferService.getInventoryBufferById(bufferId);
-        return ResponseEntity.ok(buffer);
-    }
 
     @GetMapping("/product/{productId}/location/{locationId}")
     public ResponseEntity<InventoryBufferDTO> getInventoryBufferByProductAndLocation(
@@ -110,7 +96,6 @@ public class InventoryBufferController {
         Page<InventoryBufferDTO> buffers = inventoryBufferService.getActiveInventoryBuffers(pageable);
         return ResponseEntity.ok(buffers);
     }
-
 
 
     @PutMapping("/calculate-zone/{bufferId}")

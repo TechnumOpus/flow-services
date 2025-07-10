@@ -74,6 +74,43 @@ public class InventoryOrderPipelineServiceImpl implements InventoryOrderPipeline
 
     @Override
     @Transactional
+    public void approveSelectedOrders(List<String> orderIds, String userId) {
+        log.info("Approving selected orders: {}", orderIds);
+        String effectiveUserId = userId != null ? userId : "SYSTEM";
+        LocalDateTime now = LocalDateTime.now();
+
+        for (String orderId : orderIds) {
+            InventoryOrderPipeline order = orderRepository.findByOrderId(orderId);
+            if (order == null) {
+                log.warn("Order not found: {}", orderId);
+                continue;
+            }
+            if (!"DRAFT".equals(order.getStatus())) {
+                log.warn("Order {} is not in DRAFT status, skipping", orderId);
+                continue;
+            }
+
+            order.setStatus("PROCESSED");
+            order.setLastStatusChange(now);
+            order.setLastStatusChangeBy(effectiveUserId);
+            orderRepository.save(order);
+            log.info("Approved order: {}", orderId);
+
+            // Optionally update related queue item if linked
+            ReplenishmentQueue queue = queueRepository.findByOrderId(orderId);
+            if (queue != null) {
+                queue.setStatus("PROCESSED");
+                queue.setActionTaken("APPROVED");
+                queue.setProcessedAt(now);
+                queue.setProcessedBy(effectiveUserId);
+                queueRepository.save(queue);
+                log.info("Updated queue item for order {} to PROCESSED", orderId);
+            }
+        }
+    }
+
+    @Override
+    @Transactional
     public void approveAllPendingOrders(String userId) {
         log.info("Approving all pending orders");
         List<InventoryOrderPipeline> draftOrders = orderRepository.findByStatusInAndLocationId(
@@ -130,10 +167,10 @@ public class InventoryOrderPipelineServiceImpl implements InventoryOrderPipeline
 
                 // Validate buffer
                 InventoryBuffer buffer = bufferRepository.findByProductIdAndLocationId(
-                                queueItem.getProductId(), queueItem.getLocationId())
-                        .orElseThrow(() -> new ResourceNotFoundException(
-                                "Buffer not found for product: " + queueItem.getProductId() +
-                                        ", location: " + queueItem.getLocationId()));
+                                queueItem.getProductId(), queueItem.getLocationId());
+//                        .orElseThrow(() -> new ResourceNotFoundException(
+//                                "Buffer not found for product: " + queueItem.getProductId() +
+//                                        ", location: " + queueItem.getLocationId()));
 
                 // Validate location and supplier
                 Location location = locationRepository.findByLocationId(queueItem.getLocationId())

@@ -148,8 +148,7 @@ public class DynamicBufferManagementServiceImpl {
             logDto.setChangePercentage(((double) (newBufferUnits - oldBufferUnits) / oldBufferUnits) * 100);
             logDto.setTriggerReason("consecutive_" + zone.toLowerCase());
             logDto.setConsecutiveDaysInZone(buffer.getConsecutiveZoneDays());
-            logDto.setZoneWhenTriggered(zone);
-            logDto.setAdcAtAdjustment(adcNormalized);
+            logDto.setBaseADC(adcNormalized);
             logDto.setSystemRecommended(true);
             logDto.setRequiresApproval("RED".equalsIgnoreCase(zone));
             logDto.setApprovalStatus("RED".equalsIgnoreCase(zone) ? "PENDING" : "AUTO_APPROVED");

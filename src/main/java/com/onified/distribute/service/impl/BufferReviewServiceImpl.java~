@@ -1,0 +1,383 @@
+package com.onified.distribute.service.impl;
+
+import com.onified.distribute.dto.*;
+import com.onified.distribute.entity.InventoryBuffer;
+import com.onified.distribute.repository.InventoryBufferRepository;
+import com.onified.distribute.service.*;
+import lombok.Builder;
+import lombok.Data;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+@Slf4j
+@Service
+@RequiredArgsConstructor
+@Transactional
+public class BufferReviewServiceImpl implements BufferReviewService {
+
+    private final InventoryBufferRepository inventoryBufferRepository;
+    private final InventoryBufferService inventoryBufferService;
+    private final BufferAdjustmentLogService bufferAdjustmentLogService;
+    private final ConsumptionProfileService consumptionProfileService;
+    private final LeadTimeService leadTimeService;
+    private final ProductService productService;
+
+    // DBM Configuration Constants
+    private static final int DEFAULT_CONSECUTIVE_THRESHOLD_DAYS = 3;
+    private static final int DEFAULT_LOCK_PERIOD_CYCLES = 6;
+    private static final double DEFAULT_INCREASE_PERCENTAGE = 33.0;
+    private static final double DEFAULT_DECREASE_PERCENTAGE = 33.0;
+    private static final double APPROVAL_THRESHOLD_PERCENTAGE = 20.0;
+    private static final double SMOOTH_ADJUSTMENT_PERCENTAGE = 15.0;
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<BufferReviewDTO> getBufferReviewData(String productId, String locationId,
+                                                     String currentZone, Boolean dueForReview,
+                                                     Pageable pageable) {
+        log.info("Fetching buffer review data with filters - productId: {}, locationId: {}, currentZone: {}, dueForReview: {}",
+                productId, locationId, currentZone, dueForReview);
+
+        Page<InventoryBuffer> buffers;
+        LocalDateTime now = LocalDateTime.now();
+
+        // Apply filters
+        if (productId != null && locationId != null) {
+            Optional<InventoryBuffer> buffer = inventoryBufferRepository.findByProductIdAndLocationId(productId, locationId);
+            List<InventoryBuffer> bufferList = buffer.map(List::of).orElse(List.of());
+            buffers = new PageImpl<>(bufferList, pageable, bufferList.size());
+        } else if (productId != null) {
+            buffers = inventoryBufferRepository.findByProductId(productId, pageable);
+        } else if (locationId != null) {
+            buffers = inventoryBufferRepository.findByLocationId(locationId, pageable);
+        } else if (currentZone != null) {
+            buffers = inventoryBufferRepository.findByCurrentZone(currentZone, pageable);
+        } else if (Boolean.TRUE.equals(dueForReview)) {
+            buffers = inventoryBufferRepository.findBuffersDueForReview(now, pageable);
+        } else {
+            buffers = inventoryBufferRepository.findActiveBuffers(pageable);
+        }
+
+        // Convert to BufferReviewDTO with DBM calculations
+        List<BufferReviewDTO> reviewDTOs = buffers.getContent().stream()
+                .map(this::convertToBufferReviewDTO)
+                .collect(Collectors.toList());
+
+        return new PageImpl<>(reviewDTOs, pageable, buffers.getTotalElements());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public BufferReviewDTO getBufferReviewById(String bufferId) {
+        log.info("Fetching buffer review data for buffer: {}", bufferId);
+
+        InventoryBuffer buffer = inventoryBufferRepository.findById(bufferId)
+                .orElseThrow(() -> new IllegalArgumentException("Buffer not found with ID: " + bufferId));
+
+        return convertToBufferReviewDTO(buffer);
+    }
+
+    @Override
+    public BufferAdjustmentLogDTO adjustBuffer(BufferAdjustmentRequestDTO request) {
+        log.info("Adjusting buffer: {} with recommended units: {}",
+                request.getBufferId(), request.getRecommendedBufferUnits());
+
+        // Get current buffer
+        InventoryBuffer buffer = inventoryBufferRepository.findById(request.getBufferId())
+                .orElseThrow(() -> new IllegalArgumentException("Buffer not found with ID: " + request.getBufferId()));
+
+        Integer oldBufferUnits = buffer.getBufferUnits();
+        Integer newBufferUnits = request.getRecommendedBufferUnits();
+
+        // Validate buffer is not locked
+        if (isBufferLocked(buffer)) {
+            throw new IllegalStateException("Buffer is locked for adjustments until " + buffer.getNextReviewDue());
+        }
+
+        // Calculate change percentage
+        double changePercentage = 0.0;
+        if (oldBufferUnits != null && oldBufferUnits > 0) {
+            changePercentage = ((double) (newBufferUnits - oldBufferUnits) / oldBufferUnits) * 100;
+        }
+
+        // Determine adjustment type
+        String adjustmentType = determineAdjustmentType(oldBufferUnits, newBufferUnits);
+
+        // Update buffer
+        buffer.setBufferUnits(newBufferUnits);
+        buffer.setLastReviewDate(LocalDateTime.now());
+        buffer.setNextReviewDue(calculateNextReviewDue(buffer));
+        buffer.setUpdatedAt(LocalDateTime.now());
+        buffer.setUpdatedBy(request.getUpdatedBy());
+        buffer.setConsecutiveZoneDays(0); // Reset after adjustment
+
+        InventoryBuffer savedBuffer = inventoryBufferRepository.save(buffer);
+
+        // Create adjustment log
+        BufferAdjustmentLogDTO logDto = createAdjustmentLog(
+                savedBuffer, adjustmentType, oldBufferUnits, newBufferUnits,
+                changePercentage, request.getAdjustmentReason(), request.getUpdatedBy(),
+                request.getOverrideSystemRecommendation(), request.getComments()
+        );
+
+        return bufferAdjustmentLogService.createBufferAdjustmentLog(logDto);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<BufferReviewDTO> calculateDbmRecommendations() {
+        log.info("Calculating DBM recommendations for all active buffers");
+
+        List<InventoryBuffer> activeBuffers = inventoryBufferRepository.findActiveBuffers(Pageable.unpaged()).getContent();
+        return activeBuffers.stream()
+                .map(this::convertToBufferReviewDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public BufferReviewDTO calculateDbmRecommendation(String bufferId) {
+        log.info("Calculating DBM recommendation for buffer: {}", bufferId);
+
+        InventoryBuffer buffer = inventoryBufferRepository.findById(bufferId)
+                .orElseThrow(() -> new IllegalArgumentException("Buffer not found with ID: " + bufferId));
+
+        return convertToBufferReviewDTO(buffer);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<BufferReviewDTO> getBuffersDueForReview(Pageable pageable) {
+        log.info("Fetching buffers due for review");
+
+        LocalDateTime now = LocalDateTime.now();
+        Page<InventoryBuffer> buffers = inventoryBufferRepository.findBuffersDueForReview(now, pageable);
+
+        List<BufferReviewDTO> reviewDTOs = buffers.getContent().stream()
+                .map(this::convertToBufferReviewDTO)
+                .collect(Collectors.toList());
+
+        return new PageImpl<>(reviewDTOs, pageable, buffers.getTotalElements());
+    }
+
+    @Override
+    public List<BufferAdjustmentLogDTO> bulkAdjustBuffers(List<BufferAdjustmentRequestDTO> requests) {
+        log.info("Bulk adjusting {} buffers", requests.size());
+
+        List<BufferAdjustmentLogDTO> adjustmentLogs = new ArrayList<>();
+
+        for (BufferAdjustmentRequestDTO request : requests) {
+            try {
+                BufferAdjustmentLogDTO log = adjustBuffer(request);
+                adjustmentLogs.add(log);
+            } catch (Exception e) {
+                log.error("Failed to adjust buffer: {}, error: {}", request.getBufferId(), e.getMessage());
+            }
+        }
+
+        return adjustmentLogs;
+    }
+
+    private BufferReviewDTO convertToBufferReviewDTO(InventoryBuffer buffer) {
+        ConsumptionProfileDTO consumptionProfile = null;
+        try {
+            consumptionProfile = consumptionProfileService.getConsumptionProfileByProductAndLocation(
+                    buffer.getProductId(), buffer.getLocationId());
+        } catch (Exception e) {
+            log.warn("No consumption profile found for product: {} at location: {}",
+                    buffer.getProductId(), buffer.getLocationId());
+        }
+
+        Double rlt = null;
+        try {
+            rlt = leadTimeService.calculateTotalLeadTime(buffer.getProductId(), buffer.getLocationId());
+        } catch (Exception e) {
+            log.warn("No lead time found for product: {} at location: {}",
+                    buffer.getProductId(), buffer.getLocationId());
+        }
+
+        DbmRecommendation recommendation = calculateDbmRecommendation(buffer, consumptionProfile, rlt);
+
+        String productName = getProductName(buffer.getProductId());
+        String locationName = getLocationName(buffer.getLocationId());
+
+        return BufferReviewDTO.builder()
+                .bufferId(buffer.getBufferId())
+                .productId(buffer.getProductId())
+                .locationId(buffer.getLocationId())
+                .productName(productName)
+                .locationName(locationName)
+                .lastReviewDate(buffer.getLastReviewDate())
+                .consecutiveZoneDays(buffer.getConsecutiveZoneDays())
+                .currentBufferUnits(buffer.getBufferUnits())
+                .recommendedBufferUnits(recommendation.getRecommendedBufferUnits())
+                .nextReviewDue(buffer.getNextReviewDue())
+                .suggestedAction(recommendation.getSuggestedAction())
+                .currentZone(buffer.getCurrentZone())
+                .bufferConsumedPct(buffer.getBufferConsumedPct())
+                .adjustmentThresholdDays(buffer.getAdjustmentThresholdDays() != null ?
+                        buffer.getAdjustmentThresholdDays() : DEFAULT_CONSECUTIVE_THRESHOLD_DAYS)
+                .dbmReviewPeriodDays(buffer.getDbmReviewPeriodDays())
+                .triggerReason(recommendation.getTriggerReason())
+                .changePercentage(recommendation.getChangePercentage())
+//                .requiresApproval(recommendation.getRequiresApproval())
+                .baseADC(consumptionProfile != null ? consumptionProfile.getAdcNormalized() : null)
+                .rlt(rlt)
+                .netAvailableQty(buffer.getNetAvailableQty())
+                .currentInventory(buffer.getCurrentInventory())
+                .inPipelineQty(buffer.getInPipelineQty())
+                .adcTrend(consumptionProfile != null ? consumptionProfile.getAdcTrend() : null)
+                .trendConfidence(consumptionProfile != null ? consumptionProfile.getTrendConfidence() : null)
+                .calculationDate(LocalDateTime.now())
+                .build();
+    }
+
+    private DbmRecommendation calculateDbmRecommendation(InventoryBuffer buffer,
+                                                         ConsumptionProfileDTO consumptionProfile,
+                                                         Double rlt) {
+        String suggestedAction = "MAINTAIN_BUFFER";
+        Integer recommendedBufferUnits = buffer.getBufferUnits();
+        String triggerReason = "No adjustment needed";
+        double changePercentage = 0.0;
+        boolean requiresApproval = false;
+
+        if (shouldAdjustBuffer(buffer)) {
+            if (isInRedZoneTooLong(buffer)) {
+                suggestedAction = "INCREASE_BUFFER";
+                recommendedBufferUnits = calculateIncreasedBuffer(buffer, consumptionProfile, rlt);
+                triggerReason = String.format("In RED/CRITICAL zone for %d consecutive days (threshold: %d)",
+                        buffer.getConsecutiveZoneDays(), getAdjustmentThresholdDays(buffer));
+            } else if (isInGreenZoneTooLong(buffer)) {
+                suggestedAction = "DECREASE_BUFFER";
+                recommendedBufferUnits = calculateDecreasedBuffer(buffer, consumptionProfile, rlt);
+                triggerReason = String.format("In GREEN zone for %d consecutive days (threshold: %d)",
+                        buffer.getConsecutiveZoneDays(), getAdjustmentThresholdDays(buffer));
+            }
+
+            if (buffer.getBufferUnits() != null && buffer.getBufferUnits() > 0) {
+                changePercentage = ((double) (recommendedBufferUnits - buffer.getBufferUnits()) / buffer.getBufferUnits()) * 100;
+            }
+            requiresApproval = Math.abs(changePercentage) > APPROVAL_THRESHOLD_PERCENTAGE;
+        }
+
+        return DbmRecommendation.builder()
+                .suggestedAction(suggestedAction)
+                .recommendedBufferUnits(recommendedBufferUnits)
+                .triggerReason(triggerReason)
+                .changePercentage(changePercentage)
+                .requiresApproval(requiresApproval)
+                .build();
+    }
+
+    private boolean shouldAdjustBuffer(InventoryBuffer buffer) {
+        if (isBufferLocked(buffer)) {
+            return false;
+        }
+        int thresholdDays = getAdjustmentThresholdDays(buffer);
+        return buffer.getConsecutiveZoneDays() != null && buffer.getConsecutiveZoneDays() >= thresholdDays;
+    }
+
+    private boolean isBufferLocked(InventoryBuffer buffer) {
+        if (buffer.getLastReviewDate() == null) return false;
+        int lockPeriodDays = (buffer.getDbmReviewPeriodDays() != null ?
+                buffer.getDbmReviewPeriodDays() : 30) * DEFAULT_LOCK_PERIOD_CYCLES;
+        LocalDateTime lockUntil = buffer.getLastReviewDate().plusDays(lockPeriodDays);
+        return LocalDateTime.now().isBefore(lockUntil);
+    }
+
+    private boolean isInRedZoneTooLong(InventoryBuffer buffer) {
+        return "RED".equals(buffer.getCurrentZone()) || "CRITICAL".equals(buffer.getCurrentZone());
+    }
+
+    private boolean isInGreenZoneTooLong(InventoryBuffer buffer) {
+        return "GREEN".equals(buffer.getCurrentZone());
+    }
+
+    private int getAdjustmentThresholdDays(InventoryBuffer buffer) {
+        return buffer.getAdjustmentThresholdDays() != null ?
+                buffer.getAdjustmentThresholdDays() : DEFAULT_CONSECUTIVE_THRESHOLD_DAYS;
+    }
+
+    private Integer calculateIncreasedBuffer(InventoryBuffer buffer, ConsumptionProfileDTO profile, Double rlt) {
+        double increaseFactor = SMOOTH_ADJUSTMENT_PERCENTAGE / 100.0; // Default to 15-20%
+        if (buffer.getAdjustmentThresholdDays() != null && buffer.getConsecutiveZoneDays() >= buffer.getAdjustmentThresholdDays() * 2) {
+            increaseFactor = DEFAULT_INCREASE_PERCENTAGE / 100.0; // 33% if severe
+        }
+        return (int) Math.round(buffer.getBufferUnits() * (1 + increaseFactor));
+    }
+
+    private Integer calculateDecreasedBuffer(InventoryBuffer buffer, ConsumptionProfileDTO profile, Double rlt) {
+        double decreaseFactor = SMOOTH_ADJUSTMENT_PERCENTAGE / 100.0; // Default to 15-20%
+        if (buffer.getAdjustmentThresholdDays() != null && buffer.getConsecutiveZoneDays() >= buffer.getAdjustmentThresholdDays() * 2) {
+            decreaseFactor = DEFAULT_DECREASE_PERCENTAGE / 100.0; // 33% if severe
+        }
+        return (int) Math.max(1, Math.round(buffer.getBufferUnits() * (1 - decreaseFactor)));
+    }
+
+    private LocalDateTime calculateNextReviewDue(InventoryBuffer buffer) {
+        int reviewPeriod = buffer.getDbmReviewPeriodDays() != null ?
+                buffer.getDbmReviewPeriodDays() : 30;
+        return LocalDateTime.now().plusDays(reviewPeriod);
+    }
+
+    private String determineAdjustmentType(Integer oldUnits, Integer newUnits) {
+        if (newUnits > oldUnits) return "INCREASE";
+        if (newUnits < oldUnits) return "DECREASE";
+        return "MAINTAIN";
+    }
+
+    private BufferAdjustmentLogDTO createAdjustmentLog(InventoryBuffer buffer, String adjustmentType,
+                                                       Integer oldBufferUnits, Integer newBufferUnits,
+                                                       double changePercentage, String adjustmentReason,
+                                                       String updatedBy, Boolean overrideSystemRecommendation,
+                                                       String comments) {
+        BufferAdjustmentLogDTO logDto = new BufferAdjustmentLogDTO();
+        logDto.setBufferId(buffer.getBufferId());
+        logDto.setProductId(buffer.getProductId());
+        logDto.setLocationId(buffer.getLocationId());
+        logDto.setAdjustmentType(adjustmentType);
+        logDto.setProposedBufferUnits(newBufferUnits);
+        logDto.setFinalBufferUnits(newBufferUnits);
+        logDto.setChangePercentage(changePercentage);
+        logDto.setTriggerReason(adjustmentReason != null ? adjustmentReason : "Manual adjustment");
+        logDto.setConsecutiveDaysInZone(buffer.getConsecutiveZoneDays());
+        logDto.setSystemRecommended(overrideSystemRecommendation != null ? !overrideSystemRecommendation : true);
+        logDto.setRequiresApproval(Math.abs(changePercentage) > APPROVAL_THRESHOLD_PERCENTAGE);
+        logDto.setAdjustmentDate(LocalDateTime.now());
+        logDto.setCreatedBy(updatedBy);
+        logDto.setComments(comments);
+
+        return logDto;
+    }
+
+    private String getProductName(String productId) {
+        try {
+            return productService.getProductById(productId).getName();
+        } catch (Exception e) {
+            log.warn("Product name not found for productId: {}, using productId", productId);
+            return productId;
+        }
+    }
+
+    private String getLocationName(String locationId) {
+        try {
+            return productService.getLocationById(locationId).getName();
+        } catch (Exception e) {
+            log.warn("Location name not found for locationId: {}, using locationId", locationId);
+            return locationId;
+        }
+    }
+}
+
+// Helper class for DBM recommendation calculations

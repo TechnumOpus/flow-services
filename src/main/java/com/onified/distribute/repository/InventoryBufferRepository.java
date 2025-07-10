@@ -22,6 +22,7 @@ public interface InventoryBufferRepository extends MongoRepository<InventoryBuff
     Page<InventoryBuffer> findByProductIdInAndCurrentZone(List<String> productIds, String currentZone, Pageable pageable);
 
     // These Spring Data methods will work automatically now
+    Page<InventoryBuffer> findByProductIdAndLocationId(String productId, String locationId, Pageable pageable);
     Optional<InventoryBuffer> findByProductIdAndLocationId(String productId, String locationId);
     Page<InventoryBuffer> findByProductId(String productId, Pageable pageable);
     Page<InventoryBuffer> findByLocationId(String locationId, Pageable pageable);
