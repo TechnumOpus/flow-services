@@ -3,7 +3,7 @@ package com.onified.distribute.controller;
 import com.onified.distribute.dto.InventoryBufferDTO;
 import com.onified.distribute.scheduler.BufferStatusUpdateScheduler;
 import com.onified.distribute.service.InventoryBufferService;
-import com.onified.distribute.service.impl.DynamicBufferManagementServiceImpl;
+//import com.onified.distribute.service.impl.DynamicBufferManagementServiceImpl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -33,25 +33,25 @@ public class InventoryBufferController {
 
     private final InventoryBufferService inventoryBufferService;
     private final BufferStatusUpdateScheduler bufferStatusUpdateScheduler;
-    private final DynamicBufferManagementServiceImpl dynamicBufferManagementService;
+//    private final DynamicBufferManagementServiceImpl dynamicBufferManagementService;
 
-    @PostMapping("/review")
-    public ResponseEntity<Map<String, Object>> reviewAndAdjustBuffers(
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime reviewDate,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size,
-            @RequestParam(defaultValue = "nextReviewDue") String sortBy,
-            @RequestParam(defaultValue = "asc") String sortDir) {
-        log.info("Triggering DBM buffer review for date: {}", reviewDate);
-
-        LocalDateTime currentDate = reviewDate != null ? reviewDate : LocalDateTime.now();
-        Sort sort = sortDir.equalsIgnoreCase("desc") ?
-                Sort.by(sortBy).descending() : Sort.by(sortBy).ascending();
-        Pageable pageable = PageRequest.of(page, size, sort);
-
-        Map<String, Object> result = dynamicBufferManagementService.reviewAndAdjustBuffers(currentDate, pageable);
-        return ResponseEntity.ok(result);
-    }
+//    @PostMapping("/review")
+//    public ResponseEntity<Map<String, Object>> reviewAndAdjustBuffers(
+//            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime reviewDate,
+//            @RequestParam(defaultValue = "0") int page,
+//            @RequestParam(defaultValue = "20") int size,
+//            @RequestParam(defaultValue = "nextReviewDue") String sortBy,
+//            @RequestParam(defaultValue = "asc") String sortDir) {
+//        log.info("Triggering DBM buffer review for date: {}", reviewDate);
+//
+//        LocalDateTime currentDate = reviewDate != null ? reviewDate : LocalDateTime.now();
+//        Sort sort = sortDir.equalsIgnoreCase("desc") ?
+//                Sort.by(sortBy).descending() : Sort.by(sortBy).ascending();
+//        Pageable pageable = PageRequest.of(page, size, sort);
+//
+//        Map<String, Object> result = dynamicBufferManagementService.reviewAndAdjustBuffers(currentDate, pageable);
+//        return ResponseEntity.ok(result);
+//    }
 
     @PostMapping
     public ResponseEntity<InventoryBufferDTO> createInventoryBuffer(@Valid @RequestBody InventoryBufferDTO bufferDto) {

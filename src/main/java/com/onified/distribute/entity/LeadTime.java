@@ -21,7 +21,6 @@ public class LeadTime {
     private Double orderLeadTime;
     private Double manufacturingTime;
     private Double transportTime;
-    private Double bufferLeadTimeDays;
     private Double leadTimeVariability;
     private Double onTimeDeliveryPct;
     private LocalDateTime effectiveFrom;

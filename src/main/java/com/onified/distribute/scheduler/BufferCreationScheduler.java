@@ -127,8 +127,7 @@ public class BufferCreationScheduler {
             totalLeadTimeDays += leadTime.getManufacturingTime();
         if (leadTime.getTransportTime() != null)
             totalLeadTimeDays += leadTime.getTransportTime();
-        if (leadTime.getBufferLeadTimeDays() != null)
-            totalLeadTimeDays += leadTime.getBufferLeadTimeDays();
+
 
         bufferDto.setBufferDays((int) Math.ceil(totalLeadTimeDays));
 

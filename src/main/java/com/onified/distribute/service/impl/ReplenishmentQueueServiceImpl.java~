@@ -1,6 +1,6 @@
 package com.onified.distribute.service.impl;
 
-import com.onified.distribute.dto.InventoryBufferDTO;
+import com.onified.distribute.dto.*;
 import com.onified.distribute.dto.InventoryOrderPipelineDTO;
 import com.onified.distribute.dto.ReplenishmentQueueDTO;
 import com.onified.distribute.entity.*;
@@ -21,6 +21,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.List;
+import java.util.Optional;
+
 
 @Slf4j
 @Service
@@ -607,7 +612,6 @@ public class ReplenishmentQueueServiceImpl implements ReplenishmentQueueService 
             queueItem.setRecommendedAction(recommendedAction);
             queueItem.setPriorityScore(priorityScore);
             queueItem.setAdcUsed(consumptionProfile.getAdcNormalized());
-            queueItem.setLeadTimeDays(leadTime.getBufferLeadTimeDays());
             queueItem.setReasonCodes(reasonCodes);
             queueItem.setQueueDate(LocalDateTime.now());
             queueItem.setStatus("PENDING");
@@ -640,7 +644,8 @@ public class ReplenishmentQueueServiceImpl implements ReplenishmentQueueService 
     private String determineRecommendedAction(InventoryBuffer buffer, Double daysOfSupply, LeadTime leadTime) {
         Integer bufferDeficit = calculateBufferDeficit(buffer);
         String currentZone = buffer.getCurrentZone() != null ? buffer.getCurrentZone() : "GREEN";
-        Double leadTimeDays = leadTime.getBufferLeadTimeDays() != null ? leadTime.getBufferLeadTimeDays() : 7.0;
+        Double replenishmentLeadTimeDays = leadTime.getManufacturingTime() + leadTime.getOrderLeadTime() + leadTime.getTransportTime();
+        Double leadTimeDays = replenishmentLeadTimeDays != null ? replenishmentLeadTimeDays : 7.0;
 
         if (bufferDeficit > 0) {
             if ("RED".equalsIgnoreCase(currentZone) && daysOfSupply < (leadTimeDays / 2.0)) {

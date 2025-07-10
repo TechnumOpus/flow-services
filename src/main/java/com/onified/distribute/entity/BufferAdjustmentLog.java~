@@ -21,6 +21,7 @@ public class BufferAdjustmentLog {
     private String locationId;
     private String adjustmentType;
     private Integer proposedBufferUnits;
+
     private Integer safetyBufferUnits;
     private Integer finalBufferUnits;
     private Double changePercentage;

@@ -200,10 +200,18 @@ public class LeadTimeServiceImpl implements LeadTimeService {
         }
         
         double totalLeadTime = 0.0;
-        if (leadTime.getOrderLeadTime() != null) totalLeadTime += leadTime.getOrderLeadTime();
-        if (leadTime.getManufacturingTime() != null) totalLeadTime += leadTime.getManufacturingTime();
-        if (leadTime.getTransportTime() != null) totalLeadTime += leadTime.getTransportTime();
-        if (leadTime.getBufferLeadTimeDays() != null) totalLeadTime += leadTime.getBufferLeadTimeDays();
+        if (leadTime.getOrderLeadTime() != null) {
+            totalLeadTime += leadTime.getOrderLeadTime();
+        }
+        if (leadTime.getManufacturingTime() != null) {
+            totalLeadTime += leadTime.getManufacturingTime();
+        }
+        if (leadTime.getTransportTime() != null) {
+            totalLeadTime += leadTime.getTransportTime();
+        }
+        if (leadTime.getBufferLeadTimeDays() != null) {
+            totalLeadTime += leadTime.getBufferLeadTimeDays();
+        }
         
         return totalLeadTime;
     }

@@ -225,26 +225,4 @@ public class ReplenishmentQueueController {
         return ResponseEntity.ok(queueItems);
     }
 
-    @GetMapping("/debug/data-check/{productId}/{locationId}")
-    public ResponseEntity<Map<String, Object>> debugDataCheck(
-            @PathVariable String productId,
-            @PathVariable String locationId) {
-        Map<String, Object> result = new HashMap<>();
-        var consumptionProfile = consumptionProfileRepository.findByProductIdAndLocationId(productId, locationId);
-        result.put("consumptionProfileExists", consumptionProfile.isPresent());
-        if (consumptionProfile.isPresent()) {
-            result.put("adcNormalized", consumptionProfile.get().getAdcNormalized());
-        }
-        var leadTime = leadTimeRepository.findByProductIdAndLocationIdAndIsActive(productId, locationId, true);
-        result.put("leadTimeExists", leadTime.isPresent());
-        if (leadTime.isPresent()) {
-            result.put("bufferLeadTimeDays", leadTime.get().getBufferLeadTimeDays());
-        }
-        var product = productRepository.findByProductId(productId);
-        result.put("productExists", product.isPresent());
-        if (product.isPresent()) {
-            result.put("moq", product.get().getMoq());
-        }
-        return ResponseEntity.ok(result);
-    }
 }

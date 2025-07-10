@@ -198,8 +198,7 @@ public class BufferAdjustmentLogServiceImpl implements BufferAdjustmentLogServic
         dto.setChangePercentage(adjustmentLog.getChangePercentage());
         dto.setTriggerReason(adjustmentLog.getTriggerReason());
         dto.setConsecutiveDaysInZone(adjustmentLog.getConsecutiveDaysInZone());
-        dto.setZoneWhenTriggered(adjustmentLog.getZoneWhenTriggered());
-        dto.setAdcAtAdjustment(adjustmentLog.getAdcAtAdjustment());
+        dto.setBaseADC(adjustmentLog.getBaseADC());
         dto.setSystemRecommended(adjustmentLog.getSystemRecommended());
         dto.setRequiresApproval(adjustmentLog.getRequiresApproval());
         dto.setApprovalStatus(adjustmentLog.getApprovalStatus());
@@ -225,8 +224,7 @@ public class BufferAdjustmentLogServiceImpl implements BufferAdjustmentLogServic
         adjustmentLog.setChangePercentage(dto.getChangePercentage());
         adjustmentLog.setTriggerReason(dto.getTriggerReason());
         adjustmentLog.setConsecutiveDaysInZone(dto.getConsecutiveDaysInZone());
-        adjustmentLog.setZoneWhenTriggered(dto.getZoneWhenTriggered());
-        adjustmentLog.setAdcAtAdjustment(dto.getAdcAtAdjustment());
+        adjustmentLog.setBaseADC(adjustmentLog.getBaseADC());
         adjustmentLog.setSystemRecommended(dto.getSystemRecommended());
         adjustmentLog.setRequiresApproval(dto.getRequiresApproval());
         adjustmentLog.setApprovalStatus(dto.getApprovalStatus());
@@ -250,8 +248,7 @@ public class BufferAdjustmentLogServiceImpl implements BufferAdjustmentLogServic
         adjustmentLog.setChangePercentage(dto.getChangePercentage());
         adjustmentLog.setTriggerReason(dto.getTriggerReason());
         adjustmentLog.setConsecutiveDaysInZone(dto.getConsecutiveDaysInZone());
-        adjustmentLog.setZoneWhenTriggered(dto.getZoneWhenTriggered());
-        adjustmentLog.setAdcAtAdjustment(dto.getAdcAtAdjustment());
+        adjustmentLog.setBaseADC(adjustmentLog.getBaseADC());
         adjustmentLog.setSystemRecommended(dto.getSystemRecommended());
         adjustmentLog.setRequiresApproval(dto.getRequiresApproval());
         adjustmentLog.setApprovalStatus(dto.getApprovalStatus());
@@ -259,9 +256,5 @@ public class BufferAdjustmentLogServiceImpl implements BufferAdjustmentLogServic
         adjustmentLog.setApprovalDate(dto.getApprovalDate());
         adjustmentLog.setCreatedBy(dto.getCreatedBy());
         adjustmentLog.setComments(dto.getComments());
-        // Note: We don't update logId and adjustmentDate in update operations
     }
 }
-
-/*please my basic CRUD shall work and it should be able to work on some business logics as metioned make it simple and perfect working focus on these codes only which i have given 
- */

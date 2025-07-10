@@ -612,7 +612,6 @@ public class ReplenishmentQueueServiceImpl implements ReplenishmentQueueService 
             queueItem.setRecommendedAction(recommendedAction);
             queueItem.setPriorityScore(priorityScore);
             queueItem.setAdcUsed(consumptionProfile.getAdcNormalized());
-            queueItem.setLeadTimeDays(leadTime.getBufferLeadTimeDays());
             queueItem.setReasonCodes(reasonCodes);
             queueItem.setQueueDate(LocalDateTime.now());
             queueItem.setStatus("PENDING");
@@ -645,7 +644,8 @@ public class ReplenishmentQueueServiceImpl implements ReplenishmentQueueService 
     private String determineRecommendedAction(InventoryBuffer buffer, Double daysOfSupply, LeadTime leadTime) {
         Integer bufferDeficit = calculateBufferDeficit(buffer);
         String currentZone = buffer.getCurrentZone() != null ? buffer.getCurrentZone() : "GREEN";
-        Double leadTimeDays = leadTime.getBufferLeadTimeDays() != null ? leadTime.getBufferLeadTimeDays() : 7.0;
+        Double replenishmentLeadTimeDays = leadTime.getManufacturingTime() + leadTime.getOrderLeadTime() + leadTime.getTransportTime();
+        Double leadTimeDays = replenishmentLeadTimeDays != null ? replenishmentLeadTimeDays : 7.0;
 
         if (bufferDeficit > 0) {
             if ("RED".equalsIgnoreCase(currentZone) && daysOfSupply < (leadTimeDays / 2.0)) {
@@ -686,7 +686,8 @@ public class ReplenishmentQueueServiceImpl implements ReplenishmentQueueService 
     private List<String> generateReasonCodes(InventoryBuffer buffer, Double daysOfSupply, LeadTime leadTime) {
         List<String> reasonCodes = new ArrayList<>();
         String currentZone = buffer.getCurrentZone() != null ? buffer.getCurrentZone().toLowerCase() : "GREEN";
-        Double leadTimeDays = leadTime.getBufferLeadTimeDays() != null ? leadTime.getBufferLeadTimeDays() : 7.0;
+        Double replenishmentLeadTimeDays = leadTime.getManufacturingTime() + leadTime.getOrderLeadTime() + leadTime.getTransportTime();
+        Double leadTimeDays = replenishmentLeadTimeDays != null ? replenishmentLeadTimeDays : 7.0;
 
         if ("red".equalsIgnoreCase(currentZone)) {
             reasonCodes.add("RED_ZONE");

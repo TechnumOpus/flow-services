@@ -1,4 +1,208 @@
 package com.onified.distribute.service.impl;
 
-public class BufferCalculationServiceImpl {
+import com.onified.distribute.dto.BufferCalculationRequestDTO;
+import com.onified.distribute.dto.BufferCalculationResponseDTO;
+import com.onified.distribute.entity.ConsumptionProfile;
+import com.onified.distribute.entity.LeadTime;
+import com.onified.distribute.entity.InventoryBuffer;
+import com.onified.distribute.repository.ConsumptionProfileRepository;
+import com.onified.distribute.repository.LeadTimeRepository;
+import com.onified.distribute.repository.InventoryBufferRepository;
+import com.onified.distribute.service.BufferCalculationService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+@Slf4j
+@Service
+@RequiredArgsConstructor
+@Transactional
+public class BufferCalculationServiceImpl implements BufferCalculationService {
+
+    private final ConsumptionProfileRepository consumptionProfileRepository;
+    private final LeadTimeRepository leadTimeRepository;
+    private final InventoryBufferRepository inventoryBufferRepository;
+
+    @Override
+    @Transactional(readOnly = true)
+    public BufferCalculationResponseDTO calculateBuffer(BufferCalculationRequestDTO request) {
+        log.info("Calculating buffer for product: {} at location: {} with baseADC: {} and safetyFactor: {}%",
+                request.getProductId(), request.getLocationId(), request.getBaseADC(), request.getSafetyFactor());
+
+        try {
+            // Fetch consumption profile
+            Optional<ConsumptionProfile> consumptionProfileOpt =
+                    consumptionProfileRepository.findByProductIdAndLocationId(request.getProductId(), request.getLocationId());
+
+            // Fetch lead time
+            List<LeadTime> leadTimeOpt =
+                    leadTimeRepository.findByProductIdAndLocationId(request.getProductId(), request.getLocationId());
+
+            // Check if required data is available
+            if (consumptionProfileOpt.isEmpty() || leadTimeOpt.isEmpty()) {
+                return buildErrorResponse(request, "Required data not found",
+                        consumptionProfileOpt.isEmpty() ? "ConsumptionProfile missing" : "LeadTime missing");
+            }
+
+            ConsumptionProfile consumptionProfile = consumptionProfileOpt.get();
+            LeadTime leadTime = leadTimeOpt.get();
+
+            // Validate lead time
+            if (leadTime.getBufferLeadTimeDays() == null || leadTime.getBufferLeadTimeDays() <= 0) {
+                return buildErrorResponse(request, "Invalid lead time", "Buffer lead time days is null or zero");
+            }
+
+            // Determine base ADC value
+            Double baseADCValue = getBaseADCValue(consumptionProfile, request.getBaseADC());
+            if (baseADCValue == null || baseADCValue <= 0) {
+                return buildErrorResponse(request, "Invalid ADC data",
+                        "Selected ADC (" + request.getBaseADC() + ") is null or zero");
+            }
+
+            // Perform calculations
+            Double bufferUnits = baseADCValue * leadTime.getBufferLeadTimeDays();
+            Double safetyBufferUnits = bufferUnits * (request.getSafetyFactor() / 100.0);
+            Double finalQuantity = bufferUnits + safetyBufferUnits;
+            Double leadTimeDays = leadTime.getOrderLeadTime() + leadTime.getManufacturingTime() + leadTime.getTransportTime();
+            // Build successful response
+            return BufferCalculationResponseDTO.builder()
+                    .productId(request.getProductId())
+                    .locationId(request.getLocationId())
+                    .rlt(leadTimeDays)
+                    .adc7d(consumptionProfile.getAdc7d())
+                    .adc14d(consumptionProfile.getAdc14d())
+                    .adc30d(consumptionProfile.getAdc30d())
+                    .baseADC(request.getBaseADC())
+                    .baseADCValue(baseADCValue)
+                    .safetyFactor(request.getSafetyFactor())
+                    .bufferUnits(Math.round(bufferUnits * 100.0) / 100.0) // Round to 2 decimal places
+                    .safetyBufferUnits(Math.round(safetyBufferUnits * 100.0) / 100.0)
+                    .finalQuantity(Math.round(finalQuantity * 100.0) / 100.0)
+                    .calculationStatus("SUCCESS")
+                    .message("Buffer calculation completed successfully")
+                    .build();
+
+        } catch (Exception e) {
+            log.error("Error calculating buffer for product: {} at location: {}",
+                    request.getProductId(), request.getLocationId(), e);
+            return buildErrorResponse(request, "Calculation error", e.getMessage());
+        }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<BufferCalculationResponseDTO> calculateBuffersForLocation(String locationId,
+                                                                          String baseADC,
+                                                                          Double safetyFactor,
+                                                                          List<String> productIds) {
+        log.info("Calculating buffers for location: {} with {} products", locationId, productIds.size());
+
+        return productIds.stream()
+                .map(productId -> {
+                    BufferCalculationRequestDTO request = new BufferCalculationRequestDTO();
+                    request.setProductId(productId);
+                    request.setLocationId(locationId);
+                    request.setBaseADC(baseADC);
+                    request.setSafetyFactor(safetyFactor);
+                    return calculateBuffer(request);
+                })
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<BufferCalculationResponseDTO> calculateBuffersForProduct(String productId,
+                                                                         String baseADC,
+                                                                         Double safetyFactor,
+                                                                         List<String> locationIds) {
+        log.info("Calculating buffers for product: {} across {} locations", productId, locationIds.size());
+
+        return locationIds.stream()
+                .map(locationId -> {
+                    BufferCalculationRequestDTO request = new BufferCalculationRequestDTO();
+                    request.setProductId(productId);
+                    request.setLocationId(locationId);
+                    request.setBaseADC(baseADC);
+                    request.setSafetyFactor(safetyFactor);
+                    return calculateBuffer(request);
+                })
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<BufferCalculationResponseDTO> getBufferCalculations(String productId,
+                                                                    String locationId,
+                                                                    String baseADC,
+                                                                    Double safetyFactor,
+                                                                    Pageable pageable) {
+        log.info("Getting paginated buffer calculations with filters - productId: {}, locationId: {}",
+                productId, locationId);
+
+        List<BufferCalculationResponseDTO> results = new ArrayList<>();
+
+        if (productId != null && locationId != null) {
+            // Single calculation
+            BufferCalculationRequestDTO request = new BufferCalculationRequestDTO();
+            request.setProductId(productId);
+            request.setLocationId(locationId);
+            request.setBaseADC(baseADC != null ? baseADC : "14adc");
+            request.setSafetyFactor(safetyFactor != null ? safetyFactor : 20.0);
+            results.add(calculateBuffer(request));
+        } else if (productId != null) {
+            // Get all locations for this product (you might need to implement this based on your data structure)
+            // For now, returning empty list - you can enhance this based on your requirements
+            log.warn("Product-only filter not fully implemented - requires location data");
+        } else if (locationId != null) {
+            // Get all products for this location (you might need to implement this based on your data structure)
+            // For now, returning empty list - you can enhance this based on your requirements
+            log.warn("Location-only filter not fully implemented - requires product data");
+        }
+
+        // Apply pagination
+        int start = (int) pageable.getOffset();
+        int end = Math.min((start + pageable.getPageSize()), results.size());
+
+        if (start >= results.size()) {
+            return new PageImpl<>(List.of(), pageable, results.size());
+        }
+
+        List<BufferCalculationResponseDTO> pagedResults = results.subList(start, end);
+        return new PageImpl<>(pagedResults, pageable, results.size());
+    }
+
+    private Double getBaseADCValue(ConsumptionProfile consumptionProfile, String baseADC) {
+        switch (baseADC.toLowerCase()) {
+            case "7adc":
+                return consumptionProfile.getAdc7d();
+            case "14adc":
+                return consumptionProfile.getAdc14d();
+            case "30adc":
+                return consumptionProfile.getAdc30d();
+            default:
+                log.warn("Invalid baseADC selection: {}, defaulting to 14adc", baseADC);
+                return consumptionProfile.getAdc14d();
+        }
+    }
+
+    private BufferCalculationResponseDTO buildErrorResponse(BufferCalculationRequestDTO request,
+                                                            String status, String message) {
+        return BufferCalculationResponseDTO.builder()
+                .productId(request.getProductId())
+                .locationId(request.getLocationId())
+                .baseADC(request.getBaseADC())
+                .safetyFactor(request.getSafetyFactor())
+                .calculationStatus("ERROR")
+                .message(status + ": " + message)
+                .build();
+    }
 }
