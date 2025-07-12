@@ -25,11 +25,16 @@ spec:
           ports:
             - containerPort: 8080 
           env:
-            - name: SPRING_DATA_MONGODB_URI
+            - name: spring.data.mongodb.uri
               valueFrom:
                 secretKeyRef:
                   name: app-secret
                   key: spring.data.mongodb.uri
+            - name: spring.data.mongodb.database.pull
+              valueFrom:
+                secretKeyRef:
+                  name: app-secret
+                  key: spring.data.mongodb.database.pull
             - name: eureka.client.service-url.defaultZone
               valueFrom:
                 secretKeyRef:
@@ -50,12 +55,6 @@ spec:
                 secretKeyRef:
                   name: app-secret
                   key: management.zipkin.tracing.endpoint
-            - name: spring.data.mongodb.database
-              valueFrom:
-                secretKeyRef:
-                  name: app-secret
-                  key: spring.data.mongodb.database
-
 ---
 apiVersion: v1
 kind: Service

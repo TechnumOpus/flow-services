@@ -3,7 +3,7 @@ spring:
     name: pull-distribution-system
   data:
     mongodb:
-      database: MarketMap
+      database: pull_distribution_db
       auto-index-creation: true
   jackson:
     serialization:
