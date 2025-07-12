@@ -23,7 +23,7 @@ spec:
       http:
         paths:
           - pathType: Prefix
-            path: /api/v1/products/
+            path: /api/v1/products
             backend:
               service:
                 name: flow-service

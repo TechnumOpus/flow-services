@@ -24,7 +24,7 @@ spec:
           imagePullPolicy: 'Always'
           
           ports:
-            - containerPort: 8282 
+            - containerPort: 8080 
           env:
             - name: spring.data.mongodb.uri
               valueFrom:
@@ -71,6 +71,6 @@ metadata:
   namespace: trident
 spec:
   ports:
-    - port: 8282
+    - port: 8080
   selector:
     app: flow-service-trident
