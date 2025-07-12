@@ -4,7 +4,7 @@ spring:
   data:
     mongodb:
       uri: mongodb://localhost:27017
-      database: MarketMap
+      database: pull_distribution_db
       auto-index-creation: true
   jackson:
     serialization:
