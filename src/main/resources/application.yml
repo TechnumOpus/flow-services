@@ -3,7 +3,6 @@ spring:
     name: pull-distribution-system
   data:
     mongodb:
-      uri: mongodb://localhost:27017
       database: MarketMap
       auto-index-creation: true
   jackson:
