@@ -1,0 +1,194 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: flow-service-prod
+  namespace: prod
+  labels:
+    kcert.dev/ingress: "managed"
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: api-prod.onified.ai
+      http:
+        paths:
+          - pathType: Prefix
+            path: /api/v1/batch/
+            backend:
+              service:
+                name: flow-service
+                port:
+                  number: 8282
+          - pathType: Prefix
+            path: /api/v1/operation/
+            backend:
+              service:
+                name: flow-service
+                port:
+                  number: 8282
+          - pathType: Prefix
+            path: /api/v1/order/
+            backend:
+              service:
+                name: flow-service
+                port:
+                  number: 8282
+          - pathType: Prefix
+            path: /api/v1/stage/
+            backend:
+              service:
+                name: flow-service
+                port:
+                  number: 8282
+          - pathType: Prefix
+            path: /api/v1/steps/
+            backend:
+              service:
+                name: flow-service
+                port:
+                  number: 8282
+          - pathType: Prefix
+            path: /api/v1/Sheeting/
+            backend:
+              service:
+                name: flow-service
+                port:
+                  number: 8282
+          - pathType: Prefix
+            path: /api/v1/productFields/
+            backend:
+              service:
+                name: flow-service
+                port:
+                  number: 8282
+          - pathType: Prefix
+            path: /api/v1/towel/
+            backend:
+              service:
+                name: flow-service
+                port:
+                  number: 8282
+          - pathType: Prefix
+            path: /api/v1/custom-layers/
+            backend:
+              service:
+                name: flow-service
+                port:
+                  number: 8282
+          - pathType: Prefix
+            path: /api/v1/unitBars/
+            backend:
+              service:
+                name: flow-service
+                port:
+                  number: 8282
+          - pathType: Prefix
+            path: /api/v1/layouts/
+            backend:
+              service:
+                name: flow-service
+                port:
+                  number: 8282
+          - pathType: Prefix
+            path: /api/v1/unit-bar-settings/
+            backend:
+              service:
+                name: flow-service
+                port:
+                  number: 8282
+          - pathType: Prefix
+            path: /api/v1/imageLayers/
+            backend:
+              service:
+                name: flow-service
+                port:
+                  number: 8282
+          - pathType: Prefix
+            path: /api/v1/socketLayer/
+            backend:
+              service:
+                name: flow-service
+                port:
+                  number: 8282
+          - pathType: Prefix
+            path: /api/v1/sops/
+            backend:
+              service:
+                name: flow-service
+                port:
+                  number: 8282
+          - pathType: Prefix
+            path: /api/v1/useOfSOPs/
+            backend:
+              service:
+                name: flow-service
+                port:
+                  number: 8282
+          - pathType: Prefix
+            path: /api/v1/manuals/
+            backend:
+              service:
+                name: flow-service
+                port:
+                  number: 8282
+          - pathType: Prefix
+            path: /api/v1/useOfManuals/
+            backend:
+              service:
+                name: flow-service
+                port:
+                  number: 8282
+          - pathType: Prefix
+            path: /api/v1/dynamic/
+            backend:
+              service:
+                name: flow-service
+                port:
+                  number: 8282
+          - pathType: Prefix
+            path: /api/v1/employeeMaster/
+            backend:
+              service:
+                name: flow-service
+                port:
+                  number: 8282
+          - pathType: Prefix
+            path: /api/v1/checklists/
+            backend:
+              service:
+                name: flow-service
+                port:
+                  number: 8282
+          - pathType: Prefix
+            path: /api/v1/useOfChecklists/
+            backend:
+              service:
+                name: flow-service
+                port:
+                  number: 8282
+          - pathType: Prefix
+            path: /api/v1/attendanceController/
+            backend:
+              service:
+                name: traceability-service
+                port:
+                  number: 8282
+          - pathType: Prefix
+            path: /api/v1/cameraMaster/
+            backend:
+              service:
+                name: traceability-service
+                port:
+                  number: 8282
+          - pathType: Prefix
+            path: /api/v1/dashboard/
+            backend:
+              service:
+                name: traceability-service
+                port:
+                  number: 8282
+  tls:
+    - hosts:
+        - api-prod.onified.ai
+      secretName: onified.ai

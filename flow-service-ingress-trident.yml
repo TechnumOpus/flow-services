@@ -1,0 +1,210 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: flow-service-trident
+  namespace: trident
+  labels:
+    kcert.dev/ingress: "managed"
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    nginx.ingress.kubernetes.io/proxy-body-size: "21m"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: api-trident.onified.ai
+      http:
+        paths:
+          - pathType: Prefix
+            path: /api/v1/batch/
+            backend:
+              service:
+                name: flow-service-trident
+                port:
+                  number: 8282
+          - pathType: Prefix
+            path: /api/v1/operation/
+            backend:
+              service:
+                name: flow-service-trident
+                port:
+                  number: 8282
+          - pathType: Prefix
+            path: /api/v1/order/
+            backend:
+              service:
+                name: flow-service-trident
+                port:
+                  number: 8282
+          - pathType: Prefix
+            path: /api/v1/stage/
+            backend:
+              service:
+                name: flow-service-trident
+                port:
+                  number: 8282
+          - pathType: Prefix
+            path: /api/v1/steps/
+            backend:  
+              service:
+                name: flow-service-trident
+                port:
+                  number: 8282
+          - pathType: Prefix
+            path: /api/v1/Sheeting/
+            backend:
+              service:
+                name: flow-service-trident
+                port:
+                  number: 8282
+          - pathType: Prefix
+            path: /api/v1/productFields/
+            backend:
+              service:
+                name: flow-service-trident
+                port:
+                  number: 8282
+          - pathType: Prefix
+            path: /api/v1/towel/
+            backend:
+              service:
+                name: flow-service-trident
+                port:
+                  number: 8282
+          - pathType: Prefix
+            path: /api/v1/custom-layers/
+            backend:
+              service:
+                name: flow-service-trident
+                port:
+                  number: 8282
+          - pathType: Prefix
+            path: /api/v1/layouts/
+            backend:
+              service:
+                name: flow-service-trident
+                port:
+                  number: 8282
+          - pathType: Prefix
+            path: /api/v1/unit-bar-settings/
+            backend:
+              service:
+                name: flow-service-trident
+                port:
+                  number: 8282
+          - pathType: Prefix
+            path: /api/v1/imageLayers/
+            backend:
+              service:
+                name: flow-service-trident
+                port:
+                  number: 8282
+          - pathType: Prefix
+            path: /api/v1/socketLayer/
+            backend:
+              service:
+                name: flow-service-trident
+                port:
+                  number: 8282
+          - pathType: Prefix
+            path: /api/v1/unitBars/
+            backend:
+              service:
+                name: flow-service-trident
+                port:
+                  number: 8282
+          - pathType: Prefix
+            path: /api/v1/sops/
+            backend:
+              service:
+                name: flow-service-trident
+                port:
+                  number: 8282
+          - pathType: Prefix
+            path: /api/v1/useOfSOPs/
+            backend:
+              service:
+                name: flow-service-trident
+                port:
+                  number: 8282
+          - pathType: Prefix
+            path: /api/v1/manuals/
+            backend:
+              service:
+                name: flow-service-trident
+                port:
+                  number: 8282
+          - pathType: Prefix
+            path: /api/v1/useOfManuals/
+            backend:
+              service:
+                name: flow-service-trident
+                port:
+                  number: 8282
+          - pathType: Prefix
+            path: /api/v1/dynamic/
+            backend:
+              service:
+                name: flow-service-trident
+                port:
+                  number: 8282
+          - pathType: Prefix
+            path: /api/v1/employeeMaster/
+            backend:
+              service:
+                name: flow-service-trident
+                port:
+                  number: 8282
+          - pathType: Prefix
+            path: /api/v1/checklists/
+            backend:
+              service:
+                name: flow-service-trident
+                port:
+                  number: 8282
+          - pathType: Prefix
+            path: /api/v1/useOfChecklists/
+            backend:
+              service:
+                name: flow-service-trident
+                port:
+                  number: 8282
+          - pathType: Prefix
+            path: /api/v1/attendanceController/
+            backend:
+              service:
+                name: flow-service-trident
+                port:
+                  number: 8282
+          - pathType: Prefix
+            path: /api/v1/cameraMaster/
+            backend:
+              service:
+                name: flow-service-trident
+                port:
+                  number: 8282
+          - pathType: Prefix
+            path: /api/v1/dashboard/
+            backend:
+              service:
+                name: flow-service-trident
+                port:
+                  number: 8282
+          - pathType: Prefix
+            path: /api/v1/checklistSchedules/
+            backend:
+              service:
+                name: flow-service-trident
+                port:
+                  number: 8282
+          - pathType: Prefix
+            path: /api/v1/sopSchedules/
+            backend:
+              service:
+                name: flow-service-trident
+                port:
+                  number: 8282
+
+  tls:
+    - hosts:
+        - api-trident.onified.ai
+      secretName: onified.ai

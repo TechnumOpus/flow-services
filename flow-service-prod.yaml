@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flow-service-prod
+  namespace: prod
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 25%
+  selector:
+    matchLabels:
+      app: flow-service-prod
+  template:
+    metadata:
+      labels:
+        app: flow-service-prod
+    spec:
+      containers:
+        - name: api-flow-service-prod
+          image: asia-south2-docker.pkg.dev/market-map-dev/service-registry/flow_service-prod:latest
+          imagePullPolicy: 'Always'
+          
+          ports:
+            - containerPort: 8282 
+          env:
+            - name: spring.data.mongodb.uri
+              valueFrom:
+                secretKeyRef:
+                  name: prod-secret
+                  key: spring.data.mongodb.uri
+            - name: eureka.client.service-url.defaultZone
+              valueFrom:
+                secretKeyRef:
+                  name: prod-secret
+                  key: eureka.client.service-url.defaultZone
+            - name: spring.data.redis.host
+              valueFrom:
+                secretKeyRef:
+                  name: prod-secret
+                  key: spring.data.redis.host
+            - name: spring.data.redis.password
+              valueFrom:
+                secretKeyRef:
+                  name: prod-secret
+                  key: spring.data.redis.password
+            - name: management.zipkin.tracing.endpoint
+              valueFrom:
+                secretKeyRef:
+                  name: prod-secret
+                  key: management.zipkin.tracing.endpoint
+            - name: spring.data.mongodb.database
+              valueFrom:
+                secretKeyRef:
+                  name: prod-secret
+                  key: spring.data.mongodb.database
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: flow-service-prod
+  namespace: prod
+spec:
+  ports:
+    - port: 8282
+  selector:
+    app: flow-service-prod

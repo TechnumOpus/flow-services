@@ -1,0 +1,6 @@
+# target
+Jenkinsfile
+target
+*.yml
+*.sh
+*.md

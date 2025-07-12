@@ -1,0 +1,76 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flow-service-trident
+  namespace: trident
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 25%
+  selector:
+    matchLabels:
+      app: flow-service-trident
+  template:
+    metadata:
+      labels:
+        app: flow-service-trident
+    spec:
+      containers:
+        - name: api-flow-service-trident
+          image: asia-south2-docker.pkg.dev/market-map-dev/service-registry/flow_service-trident:latest
+          imagePullPolicy: 'Always'
+          
+          ports:
+            - containerPort: 8282 
+          env:
+            - name: spring.data.mongodb.uri
+              valueFrom:
+                secretKeyRef:
+                  name: trident-secret
+                  key: spring.data.mongodb.uri
+            - name: eureka.client.service-url.defaultZone
+              valueFrom:
+                secretKeyRef:
+                  name: trident-secret
+                  key: eureka.client.service-url.defaultZone
+            - name: spring.data.redis.host
+              valueFrom:
+                secretKeyRef:
+                  name: trident-secret
+                  key: spring.data.redis.host
+            - name: spring.data.redis.password
+              valueFrom:
+                secretKeyRef:
+                  name: trident-secret
+                  key: spring.data.redis.password
+            - name: management.zipkin.tracing.endpoint
+              valueFrom:
+                secretKeyRef:
+                  name: trident-secret
+                  key: management.zipkin.tracing.endpoint
+            - name: spring.data.mongodb.database
+              valueFrom:
+                secretKeyRef:
+                  name: trident-secret
+                  key: spring.data.mongodb.database
+      tolerations:
+          - key: "app"
+            operator: "Equal"
+            value: "trident"
+            effect: "NoSchedule"
+      nodeSelector:
+        app: trident
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: flow-service-trident
+  namespace: trident
+spec:
+  ports:
+    - port: 8282
+  selector:
+    app: flow-service-trident
