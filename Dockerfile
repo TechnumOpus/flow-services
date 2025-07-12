@@ -4,5 +4,5 @@ COPY . .
 RUN mvn clean install -DskipTests=true
 
 FROM openjdk:17.0.1-jdk-slim
-COPY --from=base /app/target/Flow-Service-0.0.1-SNAPSHOT.jar app.jar
+COPY --from=base /app/target/flow-service-0.0.1-SNAPSHOT.jar app.jar
 ENTRYPOINT ["java","-jar","/app.jar"]
