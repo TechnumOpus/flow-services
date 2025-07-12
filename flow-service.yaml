@@ -25,7 +25,7 @@ spec:
           ports:
             - containerPort: 8080 
           env:
-            - name: spring.data.mongodb.uri
+            - name: SPRING_DATA_MONGODB_URI
               valueFrom:
                 secretKeyRef:
                   name: app-secret
