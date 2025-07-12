@@ -114,21 +114,19 @@ public class SeasonalityAdjustmentController {
         return ResponseEntity.noContent().build();
     }
 
-    // Updated matrix endpoint to return new format
     @GetMapping("/matrix")
     public ResponseEntity<Page<SeasonalityMatrixResponseDTO>> getSeasonalityMatrix(
             @RequestParam(defaultValue = "ALL") String type,
             @RequestParam(required = false) String locationId,
             @RequestParam(required = false) String category,
             @RequestParam(required = false) String productId,
-            @RequestParam(required = false) String entityFilter,
             @RequestParam(defaultValue = "2025") Integer year,
             @RequestParam(defaultValue = "true") Boolean isActive,
             Pageable pageable) {
-        log.info("Fetching seasonality matrix with filters: type={}, locationId={}, category={}, productId={}, entityFilter={}, year={}, isActive={}",
-                type, locationId, category, productId, entityFilter, year, isActive);
-        Page<SeasonalityMatrixResponseDTO> adjustments = seasonalityAdjustmentService.getSeasonalityMatrixConsolidated(
-                type, locationId, category, productId, entityFilter, year, isActive, pageable);
+        log.info("Fetching seasonality matrix with filters: type={}, locationId={}, category={}, productId={}, year={}, isActive={}",
+                type, locationId, category, productId, year, isActive);
+        Page<SeasonalityMatrixResponseDTO> adjustments = seasonalityAdjustmentService.getSeasonalityMatrix(
+                type, locationId, category, productId, year, isActive, pageable);
         return ResponseEntity.ok(adjustments);
     }
 

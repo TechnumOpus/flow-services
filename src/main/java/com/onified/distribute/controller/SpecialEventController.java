@@ -21,7 +21,7 @@ import java.util.List;
 
 @Slf4j
 @RestController
-@RequestMapping("/api/special-events")
+@RequestMapping("/api/v1/special-events")
 @RequiredArgsConstructor
 @Validated
 public class SpecialEventController {

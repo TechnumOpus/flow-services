@@ -14,7 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/distribution")
+@RequestMapping("/api/v1/distribution")
 @RequiredArgsConstructor
 @Tag(name = "Distribution", description = "Distribution management APIs")
 public class DistributionController {

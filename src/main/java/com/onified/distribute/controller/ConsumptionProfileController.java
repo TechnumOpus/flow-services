@@ -20,7 +20,7 @@ import java.time.LocalDateTime;
 
 @Slf4j
 @RestController
-@RequestMapping("/api/consumption-profiles")
+@RequestMapping("/api/v1/consumption-profiles")
 @RequiredArgsConstructor
 @Validated
 public class ConsumptionProfileController {

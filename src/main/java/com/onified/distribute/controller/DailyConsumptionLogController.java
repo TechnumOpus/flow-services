@@ -21,7 +21,7 @@ import java.util.List;
 
 @Slf4j
 @RestController
-@RequestMapping("/api/daily-consumption-logs")
+@RequestMapping("/api/v1/daily-consumption-logs")
 @RequiredArgsConstructor
 @Validated
 public class DailyConsumptionLogController {

@@ -19,7 +19,7 @@ import java.util.List;
 
 @Slf4j
 @RestController
-@RequestMapping("/api/seasonality-adjustments")
+@RequestMapping("/api/v1/seasonality-adjustments")
 @RequiredArgsConstructor
 @Validated
 public class SeasonalityAdjustmentController {

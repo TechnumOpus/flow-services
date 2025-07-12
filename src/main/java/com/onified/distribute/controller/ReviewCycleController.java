@@ -18,7 +18,7 @@ import java.util.List;
 
 @Slf4j
 @RestController
-@RequestMapping("/api/review-cycles")
+@RequestMapping("/api/v1/review-cycles")
 @RequiredArgsConstructor
 @Validated
 public class ReviewCycleController {

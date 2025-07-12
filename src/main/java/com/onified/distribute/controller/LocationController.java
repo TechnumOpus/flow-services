@@ -16,7 +16,7 @@ import java.util.List;
 
 @Slf4j
 @RestController
-@RequestMapping("/api/locations")
+@RequestMapping("/api/v1/locations")
 @RequiredArgsConstructor
 @Validated
 public class LocationController {

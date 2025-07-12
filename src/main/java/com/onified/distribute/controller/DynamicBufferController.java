@@ -23,7 +23,7 @@ import java.util.Map;
 
 @Slf4j
 @RestController
-@RequestMapping("/api/buffer-calculation")
+@RequestMapping("/api/v1/buffer-calculation")
 @RequiredArgsConstructor
 public class DynamicBufferController {
 

@@ -26,7 +26,7 @@ import java.util.Map;
 
 @Slf4j
 @RestController
-@RequestMapping("/api/inventory-buffers")
+@RequestMapping("/api/v1/inventory-buffers")
 @RequiredArgsConstructor
 @Validated
 public class InventoryBufferController {

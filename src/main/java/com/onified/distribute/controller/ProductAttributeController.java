@@ -16,7 +16,7 @@ import java.util.List;
 
 @Slf4j
 @RestController
-@RequestMapping("/api/product-attributes")
+@RequestMapping("/api/v1/product-attributes")
 @RequiredArgsConstructor
 @Validated
 public class ProductAttributeController {

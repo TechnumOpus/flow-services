@@ -16,7 +16,7 @@ import java.util.List;
 
 @Slf4j
 @RestController
-@RequestMapping("/api/lead-times")
+@RequestMapping("/api/v1/lead-times")
 @RequiredArgsConstructor
 @Validated
 public class LeadTimeController {
