@@ -17,6 +17,11 @@ metadata:
     nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
 spec:
+  tls:
+  - hosts:
+    - swagger-flow.onified.ai
+    - api.onified.ai
+    secretName: flow-service-tls
   ingressClassName: nginx
   rules:
     - host: swagger-flow.onified.ai
@@ -152,8 +157,3 @@ spec:
                 port:
                   number: 8080
 
-  tls:
-    - hosts:
-        - api.onified.ai
-        - swagger-flow.onified.ai
-      secretName: api-onified-ai-tls
