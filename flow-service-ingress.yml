@@ -23,7 +23,7 @@ spec:
       http:
         paths:
           - pathType: Prefix
-            path: /swagger-ui/index.html
+            path: /swagger-ui
             backend:
               service:
                 name: flow-service
