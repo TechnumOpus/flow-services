@@ -80,7 +80,7 @@ spec:
                 port:
                   number: 8080
           - pathType: Prefix
-            path: /api/v1/inventory-buffers/
+            path: /api/v1/inventory-buffers
             backend:
               service:
                 name: flow-service
