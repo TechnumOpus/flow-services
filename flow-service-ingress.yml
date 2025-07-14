@@ -52,28 +52,28 @@ spec:
                 port:
                   number: 8080
           - pathType: Prefix
-            path: /api/v1/product-attributes/
+            path: /api/v1/product-attributes
             backend:
               service:
                 name: flow-service
                 port:
                   number: 8080
           - pathType: Prefix
-            path: /api/v1/locations/
+            path: /api/v1/locations
             backend:
               service:
                 name: flow-service
                 port:
                   number: 8080
           - pathType: Prefix
-            path: /api/v1/orders/
+            path: /api/v1/orders
             backend:
               service:
                 name: flow-service
                 port:
                   number: 8080
           - pathType: Prefix
-            path: /api/v1/lead-times/
+            path: /api/v1/lead-times  
             backend:
               service:
                 name: flow-service
@@ -87,70 +87,70 @@ spec:
                 port:
                   number: 8080
           - pathType: Prefix
-            path: /api/v1/integration-configs/
+            path: /api/v1/integration-configs
             backend:
               service:
                 name: flow-service
                 port:
                   number: 8080
           - pathType: Prefix
-            path: /api/v1/daily-consumption-logs/
+            path: /api/v1/daily-consumption-logs
             backend:
               service:
                 name: flow-service
                 port:
                   number: 8080
           - pathType: Prefix
-            path: /api/v1/consumption-profiles/
+            path: /api/v1/consumption-profiles
             backend:
               service:
                 name: flow-service
                 port:
                   number: 8080
           - pathType: Prefix
-            path: /api/v1/buffer-calculation/
+            path: /api/v1/buffer-calculation  
             backend:
               service:
                 name: flow-service
                 port:
                   number: 8080
           - pathType: Prefix
-            path: /api/v1/buffer-adjustment-logs/
+            path: /api/v1/buffer-adjustment-logs
             backend:
               service:
                 name: flow-service
                 port:
                   number: 8080
           - pathType: Prefix
-            path: /api/v1/Dynamic-buffers/
+            path: /api/v1/Dynamic-buffers
             backend:
               service:
                 name: flow-service
                 port:
                   number: 8080
           - pathType: Prefix
-            path: /api/v1/replenishment-queue/
+            path: /api/v1/replenishment-queue
             backend:
               service:
                 name: flow-service
                 port:
                   number: 8080
           - pathType: Prefix
-            path: /api/v1/review-cycles/
+            path: /api/v1/review-cycles
             backend:
               service:
                 name: flow-service
                 port:
                   number: 8080
           - pathType: Prefix
-            path: /api/v1/seasonality-adjustments/
+            path: /api/v1/seasonality-adjustments
             backend:
               service:
                 name: flow-service
                 port:
                   number: 8080
           - pathType: Prefix
-            path: /api/v1/special-events/
+            path: /api/v1/special-events
             backend:
               service:
                 name: flow-service
