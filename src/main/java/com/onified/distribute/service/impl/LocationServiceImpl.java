@@ -25,6 +25,13 @@ public class LocationServiceImpl implements LocationService {
 
     private final LocationRepository locationRepository;
 
+    // For case-insensitive search
+    @Override
+    @Transactional(readOnly = true)
+    public Page<LocationDTO> getLocationsByRegionIgnoreCase(String region, Pageable pageable) {
+        log.info("Fetching locations by region (case-insensitive): {}", region);
+        return locationRepository.findByRegionIgnoreCase(region, pageable).map(this::mapToDto);
+    }
     @Override
     public LocationDTO createLocation(LocationDTO locationDto) {
         log.info("Creating location: {}", locationDto.getName());

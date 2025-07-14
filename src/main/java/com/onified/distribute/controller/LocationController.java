@@ -30,6 +30,20 @@ public class LocationController {
         return new ResponseEntity<>(createdLocation, HttpStatus.CREATED);
     }
 
+    // Alternative: Get all locations with optional region filter
+    @GetMapping
+    public ResponseEntity<Page<LocationDTO>> getAllLocations(
+            @RequestParam(required = false) String region,
+            Pageable pageable) {
+        log.info("Fetching all locations with region filter: {}", region);
+        Page<LocationDTO> locations;
+        if (region != null && !region.trim().isEmpty()) {
+            locations = locationService.getLocationsByRegion(region, pageable);
+        } else {
+            locations = locationService.getAllLocations(pageable);
+        }
+        return ResponseEntity.ok(locations);
+    }
     @PutMapping("/{locationId}")
     public ResponseEntity<LocationDTO> updateLocation(
             @PathVariable String locationId,
@@ -46,12 +60,7 @@ public class LocationController {
         return ResponseEntity.ok(location);
     }
 
-    @GetMapping
-    public ResponseEntity<Page<LocationDTO>> getAllLocations(Pageable pageable) {
-        log.info("Fetching all locations with pagination");
-        Page<LocationDTO> locations = locationService.getAllLocations(pageable);
-        return ResponseEntity.ok(locations);
-    }
+
 
     @GetMapping("/active")
     public ResponseEntity<Page<LocationDTO>> getActiveLocations(Pageable pageable) {

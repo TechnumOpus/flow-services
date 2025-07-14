@@ -19,10 +19,16 @@ public interface LocationRepository extends MongoRepository<Location, String> {
     Page<Location> findByIsActive(Boolean isActive, Pageable pageable);
     
     Page<Location> findByType(String type, Pageable pageable);
-    
-    Page<Location> findByRegion(String region, Pageable pageable);
-    
 
     List<Location> findByLocationIdIn(List<String> locationIds);
-    
+
+    Page<Location> findByRegion(String region, Pageable pageable);
+
+    // For case-insensitive search
+    Page<Location> findByRegionIgnoreCase(String region, Pageable pageable);
+
+    // For partial matching
+    @Query("{'region': {$regex: ?0, $options: 'i'}}")
+    Page<Location> findByRegionContainingIgnoreCase(String region, Pageable pageable);
+
 }

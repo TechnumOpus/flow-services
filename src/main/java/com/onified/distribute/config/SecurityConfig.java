@@ -21,11 +21,11 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource))
-                .csrf(csrf -> csrf.disable()) // Disable CSRF for API endpoints
+                .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(authz -> authz
-                        .anyRequest().permitAll() // Adjust based on your security requirements
+                        .requestMatchers("/api/v1/**").permitAll()
+                        .anyRequest().authenticated()
                 );
-
         return http.build();
     }
 }
