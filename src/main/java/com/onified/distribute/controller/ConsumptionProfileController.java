@@ -2,7 +2,7 @@ package com.onified.distribute.controller;
 
 import com.onified.distribute.dto.BufferConsumptionResponseDTO;
 import com.onified.distribute.dto.ConsumptionProfileDTO;
-import com.onified.distribute.service.ConsumptionProfileService;
+import com.onified.distribute.service.consumption.ConsumptionProfileService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -16,7 +16,6 @@ import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
-import java.time.LocalDateTime;
 
 @Slf4j
 @RestController

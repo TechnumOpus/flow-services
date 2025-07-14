@@ -3,7 +3,7 @@ package com.onified.distribute.controller;
 import com.onified.distribute.dto.BufferThresholdCycleDTO;
 import com.onified.distribute.dto.BufferThresholdUpdateDTO;
 import com.onified.distribute.dto.ReviewCycleDTO;
-import com.onified.distribute.service.BufferThresholdCycleService;
+import com.onified.distribute.service.dbm.BufferThresholdCycleService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;

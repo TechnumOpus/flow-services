@@ -3,7 +3,7 @@ package com.onified.distribute.controller;
 import com.onified.distribute.dto.LeadTimeDTO;
 import com.onified.distribute.dto.response.LeadTimeResponseDTO;
 import com.onified.distribute.dto.request.LeadTimeUpdateDTO;
-import com.onified.distribute.service.LeadTimeService;
+import com.onified.distribute.service.masterdata.LeadTimeService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -12,6 +12,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import com.onified.distribute.dto.request.BulkLeadTimeRequestDTO;
 
 import jakarta.validation.Valid;
 import java.util.List;
@@ -25,7 +26,48 @@ public class LeadTimeController {
 
     private final LeadTimeService leadTimeService;
 
-    // Enhanced GET APIs with supplier integration
+    @PostMapping
+    public ResponseEntity<LeadTimeDTO> createLeadTime(@Valid @RequestBody LeadTimeDTO leadTimeDto) {
+        log.info("Creating lead time for product: {} at location: {} - Buffer will be automatically processed",
+                leadTimeDto.getProductId(), leadTimeDto.getLocationId());
+        LeadTimeDTO createdLeadTime = leadTimeService.createLeadTime(leadTimeDto);
+        return new ResponseEntity<>(createdLeadTime, HttpStatus.CREATED);
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<LeadTimeDTO> updateLeadTime(
+            @PathVariable String id,
+            @Valid @RequestBody LeadTimeDTO leadTimeDto) {
+        log.info("Updating lead time: {} - Buffer will be automatically updated if lead time components change", id);
+        LeadTimeDTO updatedLeadTime = leadTimeService.updateLeadTime(id, leadTimeDto);
+        return ResponseEntity.ok(updatedLeadTime);
+    }
+
+    @PatchMapping("/{id}/fields")
+    public ResponseEntity<LeadTimeResponseDTO> updateLeadTimeFields(
+            @PathVariable String id,
+            @Valid @RequestBody LeadTimeUpdateDTO updateDto) {
+        log.info("Updating lead time fields: {} - Buffer will be automatically updated if lead time components change", id);
+        LeadTimeResponseDTO updatedLeadTime = leadTimeService.updateLeadTimeFields(id, updateDto);
+        return ResponseEntity.ok(updatedLeadTime);
+    }
+
+    @PatchMapping("/{id}/activate")
+    public ResponseEntity<LeadTimeDTO> activateLeadTime(@PathVariable String id) {
+        log.info("Activating lead time: {} - Buffer will be automatically processed", id);
+        LeadTimeDTO leadTime = leadTimeService.activateLeadTime(id);
+        return ResponseEntity.ok(leadTime);
+    }
+
+    @PatchMapping("/{id}/deactivate")
+    public ResponseEntity<LeadTimeDTO> deactivateLeadTime(@PathVariable String id) {
+        log.info("Deactivating lead time: {}", id);
+        LeadTimeDTO leadTime = leadTimeService.deactivateLeadTime(id);
+        return ResponseEntity.ok(leadTime);
+    }
+
+    // All other existing methods remain the same...
+
     @GetMapping("/{id}/enriched")
     public ResponseEntity<LeadTimeResponseDTO> getEnrichedLeadTimeById(@PathVariable String id) {
         log.info("Fetching enriched lead time: {}", id);
@@ -74,43 +116,17 @@ public class LeadTimeController {
         return ResponseEntity.ok(leadTimes);
     }
 
-    @PostMapping("/batch/enriched")
+    @PostMapping("/bulk/enriched")
     public ResponseEntity<List<LeadTimeResponseDTO>> getEnrichedLeadTimesByProductAndLocationIds(
-            @RequestParam List<String> productIds,
-            @RequestParam List<String> locationIds) {
-        log.info("Fetching enriched lead times by product IDs: {} and location IDs: {}", productIds, locationIds);
-        List<LeadTimeResponseDTO> leadTimes = leadTimeService.getEnrichedLeadTimesByProductAndLocationIds(productIds, locationIds);
+            @RequestBody @Valid BulkLeadTimeRequestDTO request) {
+        log.info("Fetching enriched lead times by product IDs: {} and location IDs: {}",
+                request.getProductIds(), request.getLocationIds());
+        List<LeadTimeResponseDTO> leadTimes = leadTimeService.getEnrichedLeadTimesByProductAndLocationIds(
+                request.getProductIds(), request.getLocationIds());
         return ResponseEntity.ok(leadTimes);
     }
 
-    // User update API
-    @PatchMapping("/{id}/fields")
-    public ResponseEntity<LeadTimeResponseDTO> updateLeadTimeFields(
-            @PathVariable String id,
-            @Valid @RequestBody LeadTimeUpdateDTO updateDto) {
-        log.info("Updating lead time fields: {}", id);
-        LeadTimeResponseDTO updatedLeadTime = leadTimeService.updateLeadTimeFields(id, updateDto);
-        return ResponseEntity.ok(updatedLeadTime);
-    }
-
-    // Original APIs (maintaining backward compatibility)
-    @PostMapping
-    public ResponseEntity<LeadTimeDTO> createLeadTime(@Valid @RequestBody LeadTimeDTO leadTimeDto) {
-        log.info("Creating lead time for product: {} at location: {}",
-                leadTimeDto.getProductId(), leadTimeDto.getLocationId());
-        LeadTimeDTO createdLeadTime = leadTimeService.createLeadTime(leadTimeDto);
-        return new ResponseEntity<>(createdLeadTime, HttpStatus.CREATED);
-    }
-
-    @PutMapping("/{id}")
-    public ResponseEntity<LeadTimeDTO> updateLeadTime(
-            @PathVariable String id,
-            @Valid @RequestBody LeadTimeDTO leadTimeDto) {
-        log.info("Updating lead time: {}", id);
-        LeadTimeDTO updatedLeadTime = leadTimeService.updateLeadTime(id, leadTimeDto);
-        return ResponseEntity.ok(updatedLeadTime);
-    }
-
+    // Standard DTO endpoints (without enrichment)
     @GetMapping("/{id}")
     public ResponseEntity<LeadTimeDTO> getLeadTimeById(@PathVariable String id) {
         log.info("Fetching lead time: {}", id);
@@ -159,27 +175,14 @@ public class LeadTimeController {
         return ResponseEntity.ok(leadTimes);
     }
 
-    @PostMapping("/batch")
+    @PostMapping("/bulk")
     public ResponseEntity<List<LeadTimeDTO>> getLeadTimesByProductAndLocationIds(
-            @RequestParam List<String> productIds,
-            @RequestParam List<String> locationIds) {
-        log.info("Fetching lead times by product IDs: {} and location IDs: {}", productIds, locationIds);
-        List<LeadTimeDTO> leadTimes = leadTimeService.getLeadTimesByProductAndLocationIds(productIds, locationIds);
+            @RequestBody @Valid BulkLeadTimeRequestDTO request) {
+        log.info("Fetching lead times by product IDs: {} and location IDs: {}",
+                request.getProductIds(), request.getLocationIds());
+        List<LeadTimeDTO> leadTimes = leadTimeService.getLeadTimesByProductAndLocationIds(
+                request.getProductIds(), request.getLocationIds());
         return ResponseEntity.ok(leadTimes);
-    }
-
-    @PatchMapping("/{id}/activate")
-    public ResponseEntity<LeadTimeDTO> activateLeadTime(@PathVariable String id) {
-        log.info("Activating lead time: {}", id);
-        LeadTimeDTO leadTime = leadTimeService.activateLeadTime(id);
-        return ResponseEntity.ok(leadTime);
-    }
-
-    @PatchMapping("/{id}/deactivate")
-    public ResponseEntity<LeadTimeDTO> deactivateLeadTime(@PathVariable String id) {
-        log.info("Deactivating lead time: {}", id);
-        LeadTimeDTO leadTime = leadTimeService.deactivateLeadTime(id);
-        return ResponseEntity.ok(leadTime);
     }
 
     @DeleteMapping("/{id}")
@@ -189,7 +192,7 @@ public class LeadTimeController {
         return ResponseEntity.noContent().build();
     }
 
-    @GetMapping("/product/{productId}/location/{locationId}/total")
+    @GetMapping("/product/{productId}/location/{locationId}/total-lead-time")
     public ResponseEntity<Double> calculateTotalLeadTime(
             @PathVariable String productId,
             @PathVariable String locationId) {

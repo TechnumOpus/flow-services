@@ -1,7 +1,7 @@
 package com.onified.distribute.controller;
 
 import com.onified.distribute.dto.LocationDTO;
-import com.onified.distribute.service.LocationService;
+import com.onified.distribute.service.masterdata.LocationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;

@@ -3,7 +3,7 @@ package com.onified.distribute.controller;
 import com.onified.distribute.dto.request.SupplierCreateRequest;
 import com.onified.distribute.dto.request.SupplierUpdateRequest;
 import com.onified.distribute.dto.response.SupplierResponse;
-import com.onified.distribute.service.SupplierService;
+import com.onified.distribute.service.masterdata.SupplierService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;

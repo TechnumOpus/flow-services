@@ -1,7 +1,7 @@
 package com.onified.distribute.controller;
 
 import com.onified.distribute.dto.DailyConsumptionLogDTO;
-import com.onified.distribute.service.DailyConsumptionLogService;
+import com.onified.distribute.service.consumption.DailyConsumptionLogService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -17,7 +17,6 @@ import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Slf4j
 @RestController

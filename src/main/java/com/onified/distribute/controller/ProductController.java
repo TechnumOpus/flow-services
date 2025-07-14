@@ -1,7 +1,7 @@
 package com.onified.distribute.controller;
 
 import com.onified.distribute.dto.ProductDTO;
-import com.onified.distribute.service.ProductService;
+import com.onified.distribute.service.masterdata.ProductService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;

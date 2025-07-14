@@ -1,0 +1,240 @@
+package com.onified.distribute.service.impl.masterdata;
+
+import com.onified.distribute.dto.LocationDTO;
+import com.onified.distribute.entity.Location;
+import com.onified.distribute.exception.LocationExceptionHandler;
+import com.onified.distribute.repository.LocationRepository;
+import com.onified.distribute.service.masterdata.LocationService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+@Slf4j
+@Service
+@RequiredArgsConstructor
+@Transactional
+public class LocationServiceImpl implements LocationService {
+
+    private final LocationRepository locationRepository;
+
+    // For case-insensitive search
+    @Override
+    @Transactional(readOnly = true)
+    public Page<LocationDTO> getLocationsByRegionIgnoreCase(String region, Pageable pageable) {
+        log.info("Fetching locations by region (case-insensitive): {}", region);
+        return locationRepository.findByRegionIgnoreCase(region, pageable).map(this::mapToDto);
+    }
+    @Override
+    public LocationDTO createLocation(LocationDTO locationDto) {
+        log.info("Creating location: {}", locationDto.getName());
+
+        if (locationRepository.existsByLocationId(locationDto.getLocationId())) {
+            throw new LocationExceptionHandler.LocationAlreadyExistsException(locationDto.getLocationId());
+        }
+        
+        Location location = mapToEntity(locationDto);
+        location.setCreatedAt(LocalDateTime.now());
+        location.setUpdatedAt(LocalDateTime.now());
+        
+        if (location.getLocationId() == null) {
+            location.setLocationId("LOC-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
+        }
+        
+        Location savedLocation = locationRepository.save(location);
+        log.info("Location created successfully with ID: {}", savedLocation.getLocationId());
+        
+        return mapToDto(savedLocation);
+    }
+
+    @Override
+    public LocationDTO updateLocation(String locationId, LocationDTO locationDto) {
+        log.info("Updating location: {}", locationId);
+
+        Location existingLocation = locationRepository.findByLocationId(locationId)
+                .orElseThrow(() -> new LocationExceptionHandler.LocationNotFoundException(locationId, "locationId"));
+
+        updateEntityFromDto(existingLocation, locationDto);
+        existingLocation.setUpdatedAt(LocalDateTime.now());
+        
+        Location savedLocation = locationRepository.save(existingLocation);
+        log.info("Location updated successfully: {}", locationId);
+        
+        return mapToDto(savedLocation);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public LocationDTO getLocationById(String locationId) {
+        Location location = locationRepository.findByLocationId(locationId)
+                .orElseThrow(() -> new LocationExceptionHandler.LocationNotFoundException(locationId, "locationId"));
+        return mapToDto(location);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<LocationDTO> getAllLocations(Pageable pageable) {
+        return locationRepository.findAll(pageable).map(this::mapToDto);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<LocationDTO> getActiveLocations(Pageable pageable) {
+        return locationRepository.findByIsActive(true, pageable).map(this::mapToDto);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<LocationDTO> getLocationsByType(String type, Pageable pageable) {
+        return locationRepository.findByType(type, pageable).map(this::mapToDto);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<LocationDTO> getLocationsByRegion(String region, Pageable pageable) {
+        return locationRepository.findByRegion(region, pageable).map(this::mapToDto);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<LocationDTO> getLocationsByIds(List<String> locationIds) {
+        return locationRepository.findByLocationIdIn(locationIds)
+            .stream()
+            .map(this::mapToDto)
+            .collect(Collectors.toList());
+    }
+
+    @Override
+    public LocationDTO activateLocation(String locationId) {
+        log.info("Activating location: {}", locationId);
+
+        Location location = locationRepository.findByLocationId(locationId)
+                .orElseThrow(() -> new LocationExceptionHandler.LocationNotFoundException(locationId, "locationId"));
+
+        if (location.getIsActive()) {
+            throw new LocationExceptionHandler.InvalidLocationStatusException(
+                    locationId, "ACTIVE", "activate");
+        }
+
+        location.setIsActive(true);
+        location.setUpdatedAt(LocalDateTime.now());
+        
+        Location savedLocation = locationRepository.save(location);
+        log.info("Location activated successfully: {}", locationId);
+        
+        return mapToDto(savedLocation);
+    }
+
+    @Override
+    public LocationDTO deactivateLocation(String locationId) {
+        log.info("Deactivating location: {}", locationId);
+        
+        Location location = locationRepository.findByLocationId(locationId)
+            .orElseThrow(() -> new IllegalArgumentException("Location not found: " + locationId));
+        
+        location.setIsActive(false);
+        location.setUpdatedAt(LocalDateTime.now());
+        
+        Location savedLocation = locationRepository.save(location);
+        log.info("Location deactivated successfully: {}", locationId);
+        
+        return mapToDto(savedLocation);
+    }
+
+    @Override
+    public void deleteLocation(String locationId) {
+        log.info("Deleting location: {}", locationId);
+
+        Location location = locationRepository.findByLocationId(locationId)
+            .orElseThrow(() -> new IllegalArgumentException("Location not found: " + locationId));
+
+        locationRepository.delete(location);
+        log.info("Location deleted successfully: {}", locationId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean existsByLocationId(String locationId) {
+        return locationRepository.existsByLocationId(locationId);
+    }
+
+        private Location mapToEntity(LocationDTO dto) {
+        Location location = new Location();
+        location.setLocationId(dto.getLocationId());
+        location.setCode(dto.getCode());
+        location.setName(dto.getName());
+        location.setType(dto.getType());
+        location.setRegion(dto.getRegion());
+        location.setParentLocationId(dto.getParentLocationId());
+        location.setIsActive(dto.getIsActive() != null ? dto.getIsActive() : true);
+        
+        if (dto.getAddress() != null) {
+            Location.Address address = new Location.Address();
+            address.setStreet(dto.getAddress().getStreet());
+            address.setCity(dto.getAddress().getCity());
+            address.setState(dto.getAddress().getState());
+            address.setCountry(dto.getAddress().getCountry());
+            address.setPostalCode(dto.getAddress().getPostalCode());
+            location.setAddress(address);
+        }
+        
+        return location;
+    }
+
+    private LocationDTO mapToDto(Location entity) {
+        LocationDTO dto = new LocationDTO();
+        dto.setId(entity.getId());
+        dto.setLocationId(entity.getLocationId());
+        dto.setCode(entity.getCode());
+        dto.setName(entity.getName());
+        dto.setType(entity.getType());
+        dto.setRegion(entity.getRegion());
+        dto.setParentLocationId(entity.getParentLocationId());
+        dto.setIsActive(entity.getIsActive());
+        dto.setCreatedAt(entity.getCreatedAt());
+        dto.setUpdatedAt(entity.getUpdatedAt());
+        
+       
+        if (entity.getAddress() != null) {
+            LocationDTO.AddressDTO addressDto = new LocationDTO.AddressDTO();
+            addressDto.setStreet(entity.getAddress().getStreet());
+            addressDto.setCity(entity.getAddress().getCity());
+            addressDto.setState(entity.getAddress().getState());
+            addressDto.setCountry(entity.getAddress().getCountry());
+            addressDto.setPostalCode(entity.getAddress().getPostalCode());
+            dto.setAddress(addressDto);
+        }
+        
+        return dto;
+    }
+
+    private void updateEntityFromDto(Location entity, LocationDTO dto) {
+        entity.setCode(dto.getCode());
+        entity.setName(dto.getName());
+        entity.setType(dto.getType());
+        entity.setRegion(dto.getRegion());
+        entity.setParentLocationId(dto.getParentLocationId());
+        if (dto.getIsActive() != null) {
+            entity.setIsActive(dto.getIsActive());
+        }
+        
+        if (dto.getAddress() != null) {
+            if (entity.getAddress() == null) {
+                entity.setAddress(new Location.Address());
+            }
+            entity.getAddress().setStreet(dto.getAddress().getStreet());
+            entity.getAddress().setCity(dto.getAddress().getCity());
+            entity.getAddress().setState(dto.getAddress().getState());
+            entity.getAddress().setCountry(dto.getAddress().getCountry());
+            entity.getAddress().setPostalCode(dto.getAddress().getPostalCode());
+        }
+    }
+}
+

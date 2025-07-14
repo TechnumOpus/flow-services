@@ -2,7 +2,7 @@ package com.onified.distribute.controller;
 
 import com.onified.distribute.dto.SeasonalityAdjustmentDTO;
 import com.onified.distribute.dto.SeasonalityMatrixResponseDTO;
-import com.onified.distribute.service.SeasonalityAdjustmentService;
+import com.onified.distribute.service.masterdata.SeasonalityAdjustmentService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
