@@ -3,15 +3,23 @@ spring:
     name: pull-distribution-system
   data:
     mongodb:
-      uri: mongodb://localhost:27017
-      database: pull_distribution_db
+      uri: mongodb://localhost:27017/pull_distribution_db
+      database:
+        pull: pull_distribution_db
       auto-index-creation: true
   jackson:
     serialization:
       write-dates-as-timestamps: false
+  cloud:
+    compatibility-verifier:
+      enabled: false
 
 server:
   port: 8080
+
+identity:
+  service:
+    url: http://localhost:8081
 
 logging:
   level:

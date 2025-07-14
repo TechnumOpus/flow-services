@@ -16,7 +16,7 @@ public class MongoConfig extends AbstractMongoClientConfiguration {
     @Value("${spring.data.mongodb.uri}")
     private String mongoUri;
 
-    @Value("${spring.data.mongodb.database:pull_distribution_db}")
+    @Value("${spring.data.mongodb.database.pull}")
     private String databaseName;
 
     @Override
@@ -28,8 +28,8 @@ public class MongoConfig extends AbstractMongoClientConfiguration {
     public MongoClient mongoClient() {
         ConnectionString connectionString = new ConnectionString(mongoUri);
         MongoClientSettings mongoClientSettings = MongoClientSettings.builder()
-                .applyConnectionString(connectionString)
-                .build();
+            .applyConnectionString(connectionString)
+            .build();
         return MongoClients.create(mongoClientSettings);
     }
 }

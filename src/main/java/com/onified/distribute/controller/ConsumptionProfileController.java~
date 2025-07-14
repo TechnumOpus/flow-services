@@ -17,15 +17,17 @@ import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import java.time.LocalDateTime;
-
+import java.util.Map;
+import com.onified.distribute.feign.IdentityServiceClient;
 @Slf4j
 @RestController
-@RequestMapping("/api/consumption-profiles")
+@RequestMapping("/api/v1/consumption-profiles")
 @RequiredArgsConstructor
 @Validated
 public class ConsumptionProfileController {
 
     private final ConsumptionProfileService consumptionProfileService;
+//    private final IdentityServiceClient identityServiceClient;
 
     @PostMapping
     public ResponseEntity<ConsumptionProfileDTO> createConsumptionProfile(@Valid @RequestBody ConsumptionProfileDTO profileDto) {
@@ -54,6 +56,50 @@ public class ConsumptionProfileController {
         return ResponseEntity.ok(profile);
     }
 
+//    @CrossOrigin(origins = "*", methods = {RequestMethod.GET})
+//    @GetMapping("/product/{productId}/location/{locationId}")
+//    public ResponseEntity<?> getConsumptionProfileByProductAndLocation(
+//            @PathVariable String productId,
+//            @PathVariable String locationId,
+//            @RequestHeader("Authorization") String token) {
+//        log.info("Fetching consumption profile for product: {} at location: {}", productId, locationId);
+//        try {
+//            // Get the username, role, and status from the token
+//            Map<String, String> extractedData = identityServiceClient.extractUsername(token);
+//            String username = extractedData.get("username");
+//            String role = extractedData.get("role");
+//            String status = extractedData.get("status"); // Extract status to check if the user is active
+//
+//            // Null checks for critical fields
+//            if (role == null || username == null || status == null) {
+//                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+//                        .body("Invalid token: missing role, username, or status");
+//            }
+//
+//            // Restrict access if the role is MANAGER
+//            if ("MANAGER".equals(role)) {
+//                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+//                        .body("You are not authorized to access this resource");
+//            }
+//
+//            // Check if user is active
+//            boolean isActive = "true".equals(status);
+//            boolean isAdmin = "ADMIN".equals(role);
+//
+//            // Allow access if user is ADMIN or if user is active
+//            if (!isAdmin && !isActive) {
+//                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+//                        .body("You are not authorized to access this resource");
+//            }
+//
+//            ConsumptionProfileDTO profile = consumptionProfileService.getConsumptionProfileByProductAndLocation(productId, locationId);
+//            return ResponseEntity.ok(profile);
+//        } catch (Exception e) {
+//            log.error("Error fetching consumption profile for product: {} at location: {}", productId, locationId, e);
+//            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+//                    .body("Error fetching consumption profile: " + e.getMessage());
+//        }
+//    }
     @GetMapping("/product/{productId}/location/{locationId}")
     public ResponseEntity<ConsumptionProfileDTO> getConsumptionProfileByProductAndLocation(
             @PathVariable String productId,

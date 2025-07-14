@@ -2,6 +2,7 @@ package com.onified.distribute.service.impl;
 
 import com.onified.distribute.dto.LocationDTO;
 import com.onified.distribute.entity.Location;
+import com.onified.distribute.exception.LocationExceptionHandler;
 import com.onified.distribute.repository.LocationRepository;
 import com.onified.distribute.service.LocationService;
 import lombok.RequiredArgsConstructor;
@@ -27,9 +28,9 @@ public class LocationServiceImpl implements LocationService {
     @Override
     public LocationDTO createLocation(LocationDTO locationDto) {
         log.info("Creating location: {}", locationDto.getName());
-        
+
         if (locationRepository.existsByLocationId(locationDto.getLocationId())) {
-            throw new IllegalArgumentException("Location ID already exists: " + locationDto.getLocationId());
+            throw new LocationExceptionHandler.LocationAlreadyExistsException(locationDto.getLocationId());
         }
         
         Location location = mapToEntity(locationDto);
@@ -49,10 +50,10 @@ public class LocationServiceImpl implements LocationService {
     @Override
     public LocationDTO updateLocation(String locationId, LocationDTO locationDto) {
         log.info("Updating location: {}", locationId);
-        
+
         Location existingLocation = locationRepository.findByLocationId(locationId)
-            .orElseThrow(() -> new IllegalArgumentException("Location not found: " + locationId));
-        
+                .orElseThrow(() -> new LocationExceptionHandler.LocationNotFoundException(locationId, "locationId"));
+
         updateEntityFromDto(existingLocation, locationDto);
         existingLocation.setUpdatedAt(LocalDateTime.now());
         
@@ -66,7 +67,7 @@ public class LocationServiceImpl implements LocationService {
     @Transactional(readOnly = true)
     public LocationDTO getLocationById(String locationId) {
         Location location = locationRepository.findByLocationId(locationId)
-            .orElseThrow(() -> new IllegalArgumentException("Location not found: " + locationId));
+                .orElseThrow(() -> new LocationExceptionHandler.LocationNotFoundException(locationId, "locationId"));
         return mapToDto(location);
     }
 
@@ -106,10 +107,15 @@ public class LocationServiceImpl implements LocationService {
     @Override
     public LocationDTO activateLocation(String locationId) {
         log.info("Activating location: {}", locationId);
-        
+
         Location location = locationRepository.findByLocationId(locationId)
-            .orElseThrow(() -> new IllegalArgumentException("Location not found: " + locationId));
-        
+                .orElseThrow(() -> new LocationExceptionHandler.LocationNotFoundException(locationId, "locationId"));
+
+        if (location.getIsActive()) {
+            throw new LocationExceptionHandler.InvalidLocationStatusException(
+                    locationId, "ACTIVE", "activate");
+        }
+
         location.setIsActive(true);
         location.setUpdatedAt(LocalDateTime.now());
         
@@ -138,10 +144,10 @@ public class LocationServiceImpl implements LocationService {
     @Override
     public void deleteLocation(String locationId) {
         log.info("Deleting location: {}", locationId);
-        
+
         Location location = locationRepository.findByLocationId(locationId)
             .orElseThrow(() -> new IllegalArgumentException("Location not found: " + locationId));
-        
+
         locationRepository.delete(location);
         log.info("Location deleted successfully: {}", locationId);
     }

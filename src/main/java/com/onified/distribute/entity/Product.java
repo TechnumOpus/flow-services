@@ -5,7 +5,6 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
-
 import java.time.LocalDateTime;
 
 @Data
@@ -13,21 +12,40 @@ import java.time.LocalDateTime;
 public class Product {
     @Id
     private String id;
+
     @Indexed(unique = true)
     private String productId;
+
     @Indexed(unique = true)
     private String skuCode;
+
+    @Indexed(unique = true)
+    private String tenantSku;
+
+    @Indexed(unique = true)
+    private String supplierSku;
+
     private String name;
+
     @Indexed
     private String category;
+
     private String subcategory;
+
     private String uom;
+
     private Integer moq;
+
     private Double unitCost;
+
     @Indexed
     private Boolean isActive;
+
     private LocalDateTime createdAt;
+
     private LocalDateTime updatedAt;
+
     private String createdBy;
+
     private String updatedBy;
 }

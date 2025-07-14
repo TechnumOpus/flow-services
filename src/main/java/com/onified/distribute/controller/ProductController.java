@@ -10,7 +10,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-
 import jakarta.validation.Valid;
 import java.util.List;
 
@@ -25,7 +24,8 @@ public class ProductController {
 
     @PostMapping
     public ResponseEntity<ProductDTO> createProduct(@Valid @RequestBody ProductDTO productDto) {
-        log.info("Creating product with SKU: {}", productDto.getSkuCode());
+        log.info("Creating product with SKU: {}, Tenant SKU: {}, Supplier SKU: {}",
+                productDto.getSkuCode(), productDto.getTenantSku(), productDto.getSupplierSku());
         ProductDTO createdProduct = productService.createProduct(productDto);
         return new ResponseEntity<>(createdProduct, HttpStatus.CREATED);
     }
@@ -46,10 +46,33 @@ public class ProductController {
         return ResponseEntity.ok(product);
     }
 
+    @GetMapping("/category/{category}")
+    public ResponseEntity<Page<ProductDTO>> getProductsByCategory(
+            @PathVariable String category,
+            Pageable pageable) {
+        log.info("Fetching products by category: {}", category);
+        Page<ProductDTO> products = productService.getProductsByCategory(category, pageable);
+        return ResponseEntity.ok(products);
+    }
+
     @GetMapping("/sku/{skuCode}")
     public ResponseEntity<ProductDTO> getProductBySkuCode(@PathVariable String skuCode) {
         log.info("Fetching product by SKU: {}", skuCode);
         ProductDTO product = productService.getProductBySkuCode(skuCode);
+        return ResponseEntity.ok(product);
+    }
+
+    @GetMapping("/tenant-sku/{tenantSku}")
+    public ResponseEntity<ProductDTO> getProductByTenantSku(@PathVariable String tenantSku) {
+        log.info("Fetching product by Tenant SKU: {}", tenantSku);
+        ProductDTO product = productService.getProductByTenantSku(tenantSku);
+        return ResponseEntity.ok(product);
+    }
+
+    @GetMapping("/supplier-sku/{supplierSku}")
+    public ResponseEntity<ProductDTO> getProductBySupplierSku(@PathVariable String supplierSku) {
+        log.info("Fetching product by Supplier SKU: {}", supplierSku);
+        ProductDTO product = productService.getProductBySupplierSku(supplierSku);
         return ResponseEntity.ok(product);
     }
 
@@ -67,12 +90,12 @@ public class ProductController {
         return ResponseEntity.ok(products);
     }
 
-    @GetMapping("/category/{category}")
-    public ResponseEntity<Page<ProductDTO>> getProductsByCategory(
-            @PathVariable String category,
+    @GetMapping("/search")
+    public ResponseEntity<Page<ProductDTO>> searchProductsByName(
+            @RequestParam String name,
             Pageable pageable) {
-        log.info("Fetching products by category: {}", category);
-        Page<ProductDTO> products = productService.getProductsByCategory(category, pageable);
+        log.info("Searching products by name: {}", name);
+        Page<ProductDTO> products = productService.searchProductsByName(name, pageable);
         return ResponseEntity.ok(products);
     }
 
@@ -113,6 +136,18 @@ public class ProductController {
     @GetMapping("/sku/{skuCode}/exists")
     public ResponseEntity<Boolean> existsBySkuCode(@PathVariable String skuCode) {
         boolean exists = productService.existsBySkuCode(skuCode);
+        return ResponseEntity.ok(exists);
+    }
+
+    @GetMapping("/tenant-sku/{tenantSku}/exists")
+    public ResponseEntity<Boolean> existsByTenantSku(@PathVariable String tenantSku) {
+        boolean exists = productService.existsByTenantSku(tenantSku);
+        return ResponseEntity.ok(exists);
+    }
+
+    @GetMapping("/supplier-sku/{supplierSku}/exists")
+    public ResponseEntity<Boolean> existsBySupplierSku(@PathVariable String supplierSku) {
+        boolean exists = productService.existsBySupplierSku(supplierSku);
         return ResponseEntity.ok(exists);
     }
 }

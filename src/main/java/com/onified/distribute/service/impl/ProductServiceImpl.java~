@@ -15,7 +15,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
-
+import com.onified.distribute.exception.ProductExceptionHandler.*;
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -30,23 +30,23 @@ public class ProductServiceImpl implements ProductService {
         log.info("Fetching product IDs for category: {}", category);
         return productRepository.findProductIdsByCategory(category)
                 .stream()
-                .map(product -> product.getProductId())
+                .map(Product::getProductId)
                 .collect(Collectors.toList());
     }
 
     @Override
     public ProductDTO createProduct(ProductDTO productDto) {
         log.info("Creating product with SKU: {}", productDto.getSkuCode());
-        
-        // Validate unique constraints
+
         if (productRepository.existsByProductId(productDto.getProductId())) {
-            throw new IllegalArgumentException("Product ID already exists: " + productDto.getProductId());
+            throw new ProductAlreadyExistsException("Product ID already exists: " + productDto.getProductId());
         }
-        
+
         if (productRepository.existsBySkuCode(productDto.getSkuCode())) {
-            throw new IllegalArgumentException("SKU Code already exists: " + productDto.getSkuCode());
+            throw new ProductAlreadyExistsException("SKU Code already exists: " + productDto.getSkuCode());
         }
-        
+
+
         Product product = mapToEntity(productDto);
         product.setCreatedAt(LocalDateTime.now());
         product.setUpdatedAt(LocalDateTime.now());
@@ -64,14 +64,14 @@ public class ProductServiceImpl implements ProductService {
     @Override
     public ProductDTO updateProduct(String productId, ProductDTO productDto) {
         log.info("Updating product: {}", productId);
-        
+
+        // In updateProduct method:
         Product existingProduct = productRepository.findByProductId(productId)
-            .orElseThrow(() -> new IllegalArgumentException("Product not found: " + productId));
-        
-        // Check SKU uniqueness if changed
-        if (!existingProduct.getSkuCode().equals(productDto.getSkuCode()) && 
-            productRepository.existsBySkuCode(productDto.getSkuCode())) {
-            throw new IllegalArgumentException("SKU Code already exists: " + productDto.getSkuCode());
+                .orElseThrow(() -> new ProductNotFoundException("Product not found: " + productId));
+
+        if (!existingProduct.getSkuCode().equals(productDto.getSkuCode()) &&
+                productRepository.existsBySkuCode(productDto.getSkuCode())) {
+            throw new ProductAlreadyExistsException("SKU Code already exists: " + productDto.getSkuCode());
         }
         
         updateEntityFromDto(existingProduct, productDto);
@@ -87,7 +87,7 @@ public class ProductServiceImpl implements ProductService {
     @Transactional(readOnly = true)
     public ProductDTO getProductById(String productId) {
         Product product = productRepository.findByProductId(productId)
-            .orElseThrow(() -> new IllegalArgumentException("Product not found: " + productId));
+                .orElseThrow(() -> new ProductNotFoundException("Product not found: " + productId));
         return mapToDto(product);
     }
 
@@ -95,7 +95,7 @@ public class ProductServiceImpl implements ProductService {
     @Transactional(readOnly = true)
     public ProductDTO getProductBySkuCode(String skuCode) {
         Product product = productRepository.findBySkuCode(skuCode)
-            .orElseThrow(() -> new IllegalArgumentException("Product not found with SKU: " + skuCode));
+                .orElseThrow(() -> new ProductNotFoundException("Product not found with SKU: " + skuCode));
         return mapToDto(product);
     }
 
@@ -117,6 +117,7 @@ public class ProductServiceImpl implements ProductService {
         return productRepository.findByCategory(category, pageable).map(this::mapToDto);
     }
 
+
     @Override
     @Transactional(readOnly = true)
     public List<ProductDTO> getProductsByIds(List<String> productIds) {
@@ -129,10 +130,10 @@ public class ProductServiceImpl implements ProductService {
     @Override
     public ProductDTO activateProduct(String productId) {
         log.info("Activating product: {}", productId);
-        
+
         Product product = productRepository.findByProductId(productId)
-            .orElseThrow(() -> new IllegalArgumentException("Product not found: " + productId));
-        
+                .orElseThrow(() -> new ProductNotFoundException("Product not found: " + productId));
+
         product.setIsActive(true);
         product.setUpdatedAt(LocalDateTime.now());
         
@@ -145,10 +146,10 @@ public class ProductServiceImpl implements ProductService {
     @Override
     public ProductDTO deactivateProduct(String productId) {
         log.info("Deactivating product: {}", productId);
-        
+
         Product product = productRepository.findByProductId(productId)
-            .orElseThrow(() -> new IllegalArgumentException("Product not found: " + productId));
-        
+                .orElseThrow(() -> new ProductNotFoundException("Product not found: " + productId));
+
         product.setIsActive(false);
         product.setUpdatedAt(LocalDateTime.now());
         
@@ -161,10 +162,10 @@ public class ProductServiceImpl implements ProductService {
     @Override
     public void deleteProduct(String productId) {
         log.info("Deleting product: {}", productId);
-        
+
         Product product = productRepository.findByProductId(productId)
-            .orElseThrow(() -> new IllegalArgumentException("Product not found: " + productId));
-        
+                .orElseThrow(() -> new ProductNotFoundException("Product not found: " + productId));
+
         productRepository.delete(product);
         log.info("Product deleted successfully: {}", productId);
     }
