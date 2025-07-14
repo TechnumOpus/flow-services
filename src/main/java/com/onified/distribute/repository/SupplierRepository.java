@@ -1,0 +1,30 @@
+package com.onified.distribute.repository;
+
+import com.onified.distribute.entity.Supplier;
+import org.springframework.data.mongodb.repository.MongoRepository;
+import org.springframework.data.mongodb.repository.Query;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+import java.util.Optional;
+
+@Repository
+public interface SupplierRepository extends MongoRepository<Supplier, String> {
+
+
+    List<Supplier> findBySupplierNameContainingIgnoreCase(String supplierName);
+
+    Optional<Supplier> findByContactEmail(String contactEmail);
+
+    @Query("{ 'supplierName': { $regex: ?0, $options: 'i' } }")
+    List<Supplier> findBySupplierNameRegex(String supplierName);
+
+    boolean existsByTenantVendorCode(String tenantVendorCode);
+
+    boolean existsByContactEmail(String contactEmail);
+
+    Optional<Supplier> findBySupplierName(String supplierName);
+    List<Supplier> findBySupplierIdIn(List<String> supplierIds);
+    Optional<Supplier> findByTenantVendorCode(String tenantVendorCode);
+
+}

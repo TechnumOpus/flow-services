@@ -12,12 +12,6 @@ import java.util.Optional;
 @Repository
 public interface ProductRepository extends MongoRepository<Product, String> {
 
-    Optional<Product> findByProductId(String productId);
-
-    Optional<Product> findBySkuCode(String skuCode);
-
-    Optional<Product> findByTenantSku(String tenantSku);
-
     Optional<Product> findBySupplierSku(String supplierSku);
 
     boolean existsByProductId(String productId);
@@ -32,13 +26,20 @@ public interface ProductRepository extends MongoRepository<Product, String> {
 
     Page<Product> findByCategory(String category, Pageable pageable);
 
-    List<Product> findByProductIdIn(List<String> productIds);
 
     @Query(value = "{'category': ?0, 'isActive': true}", fields = "{'productId': 1}")
     List<Product> findProductIdsByCategory(String category);
 
     @Query(value = "{'name': {$regex: ?0, $options: 'i'}}")
     Page<Product> findByNameContainingIgnoreCase(String name, Pageable pageable);
+
+
+    Optional<Product> findByProductId(String productId);
+    List<Product> findByProductIdIn(List<String> productIds);
+    Optional<Product> findBySkuCode(String skuCode);
+    Optional<Product> findByTenantSku(String tenantSku);
+    List<Product> findByIsActiveTrue();
+
 
     @Query(value = "{'category': ?0, 'isActive': true}")
     Page<Product> findActiveByCategoryIgnoreCase(String category, Pageable pageable);

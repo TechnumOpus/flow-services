@@ -209,9 +209,7 @@ public class LeadTimeServiceImpl implements LeadTimeService {
         if (leadTime.getTransportTime() != null) {
             totalLeadTime += leadTime.getTransportTime();
         }
-        if (leadTime.getBufferLeadTimeDays() != null) {
-            totalLeadTime += leadTime.getBufferLeadTimeDays();
-        }
+
         
         return totalLeadTime;
     }
@@ -224,7 +222,6 @@ public class LeadTimeServiceImpl implements LeadTimeService {
         leadTime.setOrderLeadTime(dto.getOrderLeadTime());
         leadTime.setManufacturingTime(dto.getManufacturingTime());
         leadTime.setTransportTime(dto.getTransportTime());
-        leadTime.setBufferLeadTimeDays(dto.getBufferLeadTimeDays());
         leadTime.setLeadTimeVariability(dto.getLeadTimeVariability());
         leadTime.setOnTimeDeliveryPct(dto.getOnTimeDeliveryPct());
         leadTime.setUpdatedBy(dto.getUpdatedBy());
@@ -240,7 +237,6 @@ public class LeadTimeServiceImpl implements LeadTimeService {
         dto.setOrderLeadTime(entity.getOrderLeadTime());
         dto.setManufacturingTime(entity.getManufacturingTime());
         dto.setTransportTime(entity.getTransportTime());
-        dto.setBufferLeadTimeDays(entity.getBufferLeadTimeDays());
         dto.setLeadTimeVariability(entity.getLeadTimeVariability());
         dto.setOnTimeDeliveryPct(entity.getOnTimeDeliveryPct());
         dto.setEffectiveFrom(entity.getEffectiveFrom());
@@ -256,7 +252,6 @@ public class LeadTimeServiceImpl implements LeadTimeService {
         entity.setOrderLeadTime(dto.getOrderLeadTime());
         entity.setManufacturingTime(dto.getManufacturingTime());
         entity.setTransportTime(dto.getTransportTime());
-        entity.setBufferLeadTimeDays(dto.getBufferLeadTimeDays());
         entity.setLeadTimeVariability(dto.getLeadTimeVariability());
         entity.setOnTimeDeliveryPct(dto.getOnTimeDeliveryPct());
         entity.setUpdatedBy(dto.getUpdatedBy());

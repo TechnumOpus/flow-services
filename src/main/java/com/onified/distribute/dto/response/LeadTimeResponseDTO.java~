@@ -1,0 +1,4 @@
+package com.onified.distribute.dto.response;
+
+public class LeadTimeResponseDTO {
+}

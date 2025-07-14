@@ -156,4 +156,11 @@ spec:
                 name: flow-service
                 port:
                   number: 8080
+          - pathType: Prefix
+            path: /api/v1/suppliers
+            backend:
+              service:
+                name: flow-service
+                port:
+                  number: 8080
 

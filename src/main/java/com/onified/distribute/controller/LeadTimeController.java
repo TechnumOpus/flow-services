@@ -1,6 +1,8 @@
 package com.onified.distribute.controller;
 
 import com.onified.distribute.dto.LeadTimeDTO;
+import com.onified.distribute.dto.response.LeadTimeResponseDTO;
+import com.onified.distribute.dto.request.LeadTimeUpdateDTO;
 import com.onified.distribute.service.LeadTimeService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,6 +25,75 @@ public class LeadTimeController {
 
     private final LeadTimeService leadTimeService;
 
+    // Enhanced GET APIs with supplier integration
+    @GetMapping("/{id}/enriched")
+    public ResponseEntity<LeadTimeResponseDTO> getEnrichedLeadTimeById(@PathVariable String id) {
+        log.info("Fetching enriched lead time: {}", id);
+        LeadTimeResponseDTO leadTime = leadTimeService.getEnrichedLeadTimeById(id);
+        return ResponseEntity.ok(leadTime);
+    }
+
+    @GetMapping("/enriched")
+    public ResponseEntity<Page<LeadTimeResponseDTO>> getAllEnrichedLeadTimes(Pageable pageable) {
+        log.info("Fetching all enriched lead times with pagination");
+        Page<LeadTimeResponseDTO> leadTimes = leadTimeService.getAllEnrichedLeadTimes(pageable);
+        return ResponseEntity.ok(leadTimes);
+    }
+
+    @GetMapping("/active/enriched")
+    public ResponseEntity<Page<LeadTimeResponseDTO>> getActiveEnrichedLeadTimes(Pageable pageable) {
+        log.info("Fetching active enriched lead times with pagination");
+        Page<LeadTimeResponseDTO> leadTimes = leadTimeService.getActiveEnrichedLeadTimes(pageable);
+        return ResponseEntity.ok(leadTimes);
+    }
+
+    @GetMapping("/product/{productId}/location/{locationId}/active/enriched")
+    public ResponseEntity<LeadTimeResponseDTO> getEnrichedActiveLeadTimeByProductAndLocation(
+            @PathVariable String productId,
+            @PathVariable String locationId) {
+        log.info("Fetching enriched active lead time for product: {} at location: {}", productId, locationId);
+        LeadTimeResponseDTO leadTime = leadTimeService.getEnrichedActiveLeadTimeByProductAndLocation(productId, locationId);
+        return ResponseEntity.ok(leadTime);
+    }
+
+    @GetMapping("/product/{productId}/enriched")
+    public ResponseEntity<Page<LeadTimeResponseDTO>> getEnrichedLeadTimesByProduct(
+            @PathVariable String productId,
+            Pageable pageable) {
+        log.info("Fetching enriched lead times by product: {}", productId);
+        Page<LeadTimeResponseDTO> leadTimes = leadTimeService.getEnrichedLeadTimesByProduct(productId, pageable);
+        return ResponseEntity.ok(leadTimes);
+    }
+
+    @GetMapping("/location/{locationId}/enriched")
+    public ResponseEntity<Page<LeadTimeResponseDTO>> getEnrichedLeadTimesByLocation(
+            @PathVariable String locationId,
+            Pageable pageable) {
+        log.info("Fetching enriched lead times by location: {}", locationId);
+        Page<LeadTimeResponseDTO> leadTimes = leadTimeService.getEnrichedLeadTimesByLocation(locationId, pageable);
+        return ResponseEntity.ok(leadTimes);
+    }
+
+    @PostMapping("/batch/enriched")
+    public ResponseEntity<List<LeadTimeResponseDTO>> getEnrichedLeadTimesByProductAndLocationIds(
+            @RequestParam List<String> productIds,
+            @RequestParam List<String> locationIds) {
+        log.info("Fetching enriched lead times by product IDs: {} and location IDs: {}", productIds, locationIds);
+        List<LeadTimeResponseDTO> leadTimes = leadTimeService.getEnrichedLeadTimesByProductAndLocationIds(productIds, locationIds);
+        return ResponseEntity.ok(leadTimes);
+    }
+
+    // User update API
+    @PatchMapping("/{id}/fields")
+    public ResponseEntity<LeadTimeResponseDTO> updateLeadTimeFields(
+            @PathVariable String id,
+            @Valid @RequestBody LeadTimeUpdateDTO updateDto) {
+        log.info("Updating lead time fields: {}", id);
+        LeadTimeResponseDTO updatedLeadTime = leadTimeService.updateLeadTimeFields(id, updateDto);
+        return ResponseEntity.ok(updatedLeadTime);
+    }
+
+    // Original APIs (maintaining backward compatibility)
     @PostMapping
     public ResponseEntity<LeadTimeDTO> createLeadTime(@Valid @RequestBody LeadTimeDTO leadTimeDto) {
         log.info("Creating lead time for product: {} at location: {}",
