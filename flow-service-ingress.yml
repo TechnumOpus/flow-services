@@ -19,6 +19,23 @@ metadata:
 spec:
   ingressClassName: nginx
   rules:
+    - host: swagger-flow.onified.ai
+      http:
+        paths:
+          - pathType: Prefix
+            path: /swagger-ui/index.html
+            backend:
+              service:
+                name: flow-service
+                port:
+                  number: 8080
+          - pathType: Prefix
+            path: /v3/api-docs
+            backend:
+              service:
+                name: flow-service
+                port:
+                  number: 8080
     - host: api.onified.ai
       http:
         paths:
@@ -134,23 +151,7 @@ spec:
                 name: flow-service
                 port:
                   number: 8080
-    - host: swagger-flow.onified.ai
-      http:
-        paths:
-          - pathType: Prefix
-            path: /swagger-ui/
-            backend:
-              service:
-                name: flow-service
-                port:
-                  number: 8080
-          - pathType: Prefix
-            path: /v3
-            backend:
-              service:
-                name: flow-service
-                port:
-                  number: 8080
+
   tls:
     - hosts:
         - api.onified.ai
