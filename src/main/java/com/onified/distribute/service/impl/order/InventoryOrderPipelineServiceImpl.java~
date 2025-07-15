@@ -201,7 +201,7 @@ public class InventoryOrderPipelineServiceImpl implements InventoryOrderPipeline
                 orderDTO.setLocationId(queueItem.getLocationId());
                 orderDTO.setSupplierLocationId(supplierLocationId);
                 orderDTO.setOrderType(queue.getRecommendedAction().equalsIgnoreCase("EXPEDITE") ? "EXPEDITE" : "STANDARD");
-                orderDTO.setOrderedQty(queueItem.getFinalQuantity() != null ? queueItem.getFinalQuantity() : queue.getRecommendedQty());
+                orderDTO.setOrderedQty(dto.getFinalQuantity() != null ? dto.getFinalQuantity() : queue.getRecommendedQty());
                 orderDTO.setReceivedQty(0);
                 orderDTO.setPendingQty(orderDTO.getOrderedQty());
                 orderDTO.setOrderDate(LocalDateTime.now());

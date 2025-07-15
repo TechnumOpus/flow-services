@@ -129,7 +129,6 @@ public class ReplenishmentQueueServiceImpl implements ReplenishmentQueueService 
 
 
     // Batch conversion method for better performance
-    // Batch conversion method for better performance
     private List<ReplenishmentQueueResponseDTO> convertToEnhancedDtoBatch(List<ReplenishmentQueue> queues) {
         // Get unique product IDs and location IDs
         List<String> productIds = queues.stream()
@@ -175,28 +174,14 @@ public class ReplenishmentQueueServiceImpl implements ReplenishmentQueueService 
                     dto.setQueueDate(queue.getQueueDate());
                     dto.setReasonCodes(queue.getReasonCodes());
 
-                    // Set product details and calculate final quantity
+                    // Set product details
                     Product product = productMap.get(queue.getProductId());
-                    int moq = 0; // Default MOQ
-
                     if (product != null) {
-                        moq = product.getMoq();
-                        dto.setMoq(moq);
+                        dto.setMoq(product.getMoq());
                         dto.setProductName(product.getName());
                     } else {
                         dto.setMoq(0);
                         dto.setProductName("Unknown Product");
-                    }
-
-                    // Calculate final quantity (same logic as in convertToEnhancedDto)
-                    int naq = queue.getNetAvailableQty() != null ? queue.getNetAvailableQty() : 0;
-                    int bu = queue.getBufferUnits() != null ? queue.getBufferUnits() : 0;
-                    int fq = bu - naq;
-
-                    if (fq < moq) {
-                        dto.setFinalQuantity(moq);
-                    } else {
-                        dto.setFinalQuantity(fq);
                     }
 
                     // Set location details
@@ -211,7 +196,6 @@ public class ReplenishmentQueueServiceImpl implements ReplenishmentQueueService 
                 })
                 .collect(Collectors.toList());
     }
-
 
     @Override
     public void processReplenishmentQueue() {
