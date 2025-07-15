@@ -37,7 +37,8 @@ public class CorsConfig implements WebMvcConfigurer {
         configuration.setAllowedOriginPatterns(Arrays.asList(
                 "http://localhost:3000",
                 "http://127.0.0.1:3000",
-                "https://uat.onified.ai"
+                "https://uat.onified.ai",
+                "https://swagger-flow.onified.ai"
         ));
 
         // Allow all HTTP methods
