@@ -1,6 +1,6 @@
 package com.onified.distribute.service.order;
 
-import com.onified.distribute.dto.request.CreateOrdersRequestDTO;
+import com.onified.distribute.dto.CreateOrdersRequestDTO;
 import com.onified.distribute.dto.InventoryOrderPipelineDTO;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;

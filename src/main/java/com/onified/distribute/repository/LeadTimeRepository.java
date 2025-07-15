@@ -20,8 +20,11 @@ public interface LeadTimeRepository extends MongoRepository<LeadTime, String> {
 
     boolean existsByProductIdAndLocationIdAndIsActive(String productId, String locationId, Boolean isActive);
 
+
     Page<LeadTime> findByProductId(String productId, Pageable pageable);
-    
+
+    LeadTime findByProductId(String productId);
+
     Page<LeadTime> findByLocationId(String locationId, Pageable pageable);
     
     Optional<LeadTime> findByProductIdAndLocationIdAndIsActive(String productId, String locationId, Boolean isActive);

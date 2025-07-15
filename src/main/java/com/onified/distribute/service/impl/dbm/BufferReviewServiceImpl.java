@@ -1,6 +1,7 @@
 package com.onified.distribute.service.impl.dbm;
 
 import com.onified.distribute.dto.*;
+import com.onified.distribute.dto.request.BufferAdjustmentRequestDTO;
 import com.onified.distribute.entity.InventoryBuffer;
 import com.onified.distribute.repository.InventoryBufferRepository;
 import com.onified.distribute.service.consumption.ConsumptionProfileService;

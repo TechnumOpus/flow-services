@@ -12,10 +12,7 @@ public class LeadTimeDTO {
     private Double orderLeadTime;
     private Double manufacturingTime;
     private Double transportTime;
-    private Double leadTimeVariability;
-    private Double onTimeDeliveryPct;
-    private LocalDateTime effectiveFrom;
-    private LocalDateTime effectiveTo;
+    private Integer moq;
     private Boolean isActive;
     private LocalDateTime updatedAt;
     private String updatedBy;

@@ -69,14 +69,6 @@ public class LocationController {
         return ResponseEntity.ok(locations);
     }
 
-    @GetMapping("/type/{type}")
-    public ResponseEntity<Page<LocationDTO>> getLocationsByType(
-            @PathVariable String type,
-            Pageable pageable) {
-        log.info("Fetching locations by type: {}", type);
-        Page<LocationDTO> locations = locationService.getLocationsByType(type, pageable);
-        return ResponseEntity.ok(locations);
-    }
 
     @GetMapping("/region/{region}")
     public ResponseEntity<Page<LocationDTO>> getLocationsByRegion(

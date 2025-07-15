@@ -1,7 +1,7 @@
 package com.onified.distribute.service.dbm;
 
-import com.onified.distribute.dto.BufferCalculationRequestDTO;
-import com.onified.distribute.dto.BufferCalculationResponseDTO;
+import com.onified.distribute.dto.request.BufferCalculationRequestDTO;
+import com.onified.distribute.dto.response.BufferCalculationResponseDTO;
 import org.springframework.data.domain.Pageable;
 
 import java.util.List;

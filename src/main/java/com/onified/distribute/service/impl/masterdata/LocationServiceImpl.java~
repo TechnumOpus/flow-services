@@ -90,7 +90,11 @@ public class LocationServiceImpl implements LocationService {
         return locationRepository.findByIsActive(true, pageable).map(this::mapToDto);
     }
 
-
+    @Override
+    @Transactional(readOnly = true)
+    public Page<LocationDTO> getLocationsByType(String type, Pageable pageable) {
+        return locationRepository.findByType(type, pageable).map(this::mapToDto);
+    }
 
     @Override
     @Transactional(readOnly = true)

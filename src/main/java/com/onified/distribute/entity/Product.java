@@ -17,7 +17,7 @@ public class Product {
     private String productId;
 
     @Indexed(unique = true)
-    private String skuCode;
+    private String supplierName;
 
     @Indexed(unique = true)
     private String tenantSku;
@@ -34,9 +34,6 @@ public class Product {
 
     private String uom;
 
-    private Integer moq;
-
-    private Double unitCost;
 
     @Indexed
     private Boolean isActive;

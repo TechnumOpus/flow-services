@@ -16,12 +16,9 @@ public class Location {
     private String id;
     @Indexed(unique = true)
     private String locationId;
-    private String code;
     private String name;
     @Indexed
-    private String type;
     private String region;
-    private String parentLocationId;
     private Address address;
     @Indexed
     private Boolean isActive;

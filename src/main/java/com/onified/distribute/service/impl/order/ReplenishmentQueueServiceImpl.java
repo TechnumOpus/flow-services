@@ -94,18 +94,15 @@ public class ReplenishmentQueueServiceImpl implements ReplenishmentQueueService 
 
         // Fetch product details for MOQ and name
         Optional<Product> product = productRepository.findByProductId(queue.getProductId());
-        int moq = 0; // Default MOQ
 
         if (product.isPresent()) {
-            moq = product.get().getMoq();
-            dto.setMoq(moq);
-            dto.setProductName(product.get().getName());
+            dto.setProductName(String.valueOf(product.get().getName()));
         } else {
             dto.setMoq(0);
             dto.setProductName("Unknown Product");
         }
-
-        // Calculate final quantity
+        LeadTime leadTime = leadTimeRepository.findByProductId(queue.getProductId());
+        int moq = leadTime.getMoq();
         int naq = queue.getNetAvailableQty();
         int bu = queue.getBufferUnits();
         int fq = bu - naq;
@@ -130,87 +127,88 @@ public class ReplenishmentQueueServiceImpl implements ReplenishmentQueueService 
 
     // Batch conversion method for better performance
     // Batch conversion method for better performance
-    private List<ReplenishmentQueueResponseDTO> convertToEnhancedDtoBatch(List<ReplenishmentQueue> queues) {
-        // Get unique product IDs and location IDs
-        List<String> productIds = queues.stream()
-                .map(ReplenishmentQueue::getProductId)
-                .distinct()
-                .collect(Collectors.toList());
-
-        List<String> locationIds = queues.stream()
-                .map(ReplenishmentQueue::getLocationId)
-                .distinct()
-                .collect(Collectors.toList());
-
-        // Fetch products and locations in batch
-        List<Product> products = productRepository.findByProductIdIn(productIds);
-        List<Location> locations = locationRepository.findByLocationIdIn(locationIds);
-
-        // Create maps for quick lookup
-        Map<String, Product> productMap = products.stream()
-                .collect(Collectors.toMap(Product::getProductId, p -> p));
-
-        Map<String, Location> locationMap = locations.stream()
-                .collect(Collectors.toMap(Location::getLocationId, l -> l));
-
-        // Convert to DTOs
-        return queues.stream()
-                .map(queue -> {
-                    ReplenishmentQueueResponseDTO dto = new ReplenishmentQueueResponseDTO();
-
-                    dto.setId(queue.getId());
-                    dto.setQueueId(queue.getQueueId());
-                    dto.setProductId(queue.getProductId());
-                    dto.setLocationId(queue.getLocationId());
-                    dto.setBufferUnits(queue.getBufferUnits());
-                    dto.setInHand(queue.getCurrentInventory());
-                    dto.setInPipeline(queue.getInPipelineQty());
-                    dto.setNetAvailability(queue.getNetAvailableQty());
-                    dto.setBufferGap(queue.getBufferGap());
-                    dto.setDaysOfSupply(queue.getDaysOfSupply());
-                    dto.setBufferZone(queue.getBufferZone());
-                    dto.setRecommendedAction(queue.getRecommendedAction());
-                    dto.setPriorityScore(queue.getPriorityScore());
-                    dto.setStatus(queue.getStatus());
-                    dto.setQueueDate(queue.getQueueDate());
-                    dto.setReasonCodes(queue.getReasonCodes());
-
-                    // Set product details and calculate final quantity
-                    Product product = productMap.get(queue.getProductId());
-                    int moq = 0; // Default MOQ
-
-                    if (product != null) {
-                        moq = product.getMoq();
-                        dto.setMoq(moq);
-                        dto.setProductName(product.getName());
-                    } else {
-                        dto.setMoq(0);
-                        dto.setProductName("Unknown Product");
-                    }
-
-                    // Calculate final quantity (same logic as in convertToEnhancedDto)
-                    int naq = queue.getNetAvailableQty() != null ? queue.getNetAvailableQty() : 0;
-                    int bu = queue.getBufferUnits() != null ? queue.getBufferUnits() : 0;
-                    int fq = bu - naq;
-
-                    if (fq < moq) {
-                        dto.setFinalQuantity(moq);
-                    } else {
-                        dto.setFinalQuantity(fq);
-                    }
-
-                    // Set location details
-                    Location location = locationMap.get(queue.getLocationId());
-                    if (location != null) {
-                        dto.setLocationName(location.getName());
-                    } else {
-                        dto.setLocationName("Unknown Location");
-                    }
-
-                    return dto;
-                })
-                .collect(Collectors.toList());
-    }
+//    private List<ReplenishmentQueueResponseDTO> convertToEnhancedDtoBatch(List<ReplenishmentQueue> queues) {
+//        // Get unique product IDs and location IDs
+//        List<String> productIds = queues.stream()
+//                .map(ReplenishmentQueue::getProductId)
+//                .distinct()
+//                .collect(Collectors.toList());
+//
+//        List<String> locationIds = queues.stream()
+//                .map(ReplenishmentQueue::getLocationId)
+//                .distinct()
+//                .collect(Collectors.toList());
+//
+//        // Fetch products and locations in batch
+//        List<Product> products = productRepository.findByProductIdIn(productIds);
+//        List<Location> locations = locationRepository.findByLocationIdIn(locationIds);
+//
+//        // Create maps for quick lookup
+//        Map<String, Product> productMap = products.stream()
+//                .collect(Collectors.toMap(Product::getProductId, p -> p));
+//
+//        Map<String, Location> locationMap = locations.stream()
+//                .collect(Collectors.toMap(Location::getLocationId, l -> l));
+//
+//        // Convert to DTOs
+//        return queues.stream()
+//                .map(queue -> {
+//                    ReplenishmentQueueResponseDTO dto = new ReplenishmentQueueResponseDTO();
+//
+//                    dto.setId(queue.getId());
+//                    dto.setQueueId(queue.getQueueId());
+//                    dto.setProductId(queue.getProductId());
+//                    dto.setLocationId(queue.getLocationId());
+//                    dto.setBufferUnits(queue.getBufferUnits());
+//                    dto.setInHand(queue.getCurrentInventory());
+//                    dto.setInPipeline(queue.getInPipelineQty());
+//                    dto.setNetAvailability(queue.getNetAvailableQty());
+//                    dto.setBufferGap(queue.getBufferGap());
+//                    dto.setDaysOfSupply(queue.getDaysOfSupply());
+//                    dto.setBufferZone(queue.getBufferZone());
+//                    dto.setRecommendedAction(queue.getRecommendedAction());
+//                    dto.setPriorityScore(queue.getPriorityScore());
+//                    dto.setStatus(queue.getStatus());
+//                    dto.setQueueDate(queue.getQueueDate());
+//                    dto.setReasonCodes(queue.getReasonCodes());
+//
+//                    // Set product details and calculate final quantity
+//                    Product product = productMap.get(queue.getProductId());
+//                    int moq = 0; // Default MOQ
+//
+//                    LeadTime leadTime = leadTimeRepository.findByProductId(queue.getProductId());
+//                    if (product.isPresent()) {
+//                        moq = leadTime.getMoq();
+//                        dto.setMoq(moq);
+//                        dto.setProductName(product.get().getName());
+//                    } else {
+//                        dto.setMoq(0);
+//                        dto.setProductName("Unknown Product");
+//                    }
+//
+//                    // Calculate final quantity (same logic as in convertToEnhancedDto)
+//                    int naq = queue.getNetAvailableQty() != null ? queue.getNetAvailableQty() : 0;
+//                    int bu = queue.getBufferUnits() != null ? queue.getBufferUnits() : 0;
+//                    int fq = bu - naq;
+//
+//                    if (fq < moq) {
+//                        dto.setFinalQuantity(moq);
+//                    } else {
+//                        dto.setFinalQuantity(fq);
+//                    }
+//
+//                    // Set location details
+//                    Location location = locationMap.get(queue.getLocationId());
+//                    if (location != null) {
+//                        dto.setLocationName(location.getName());
+//                    } else {
+//                        dto.setLocationName("Unknown Location");
+//                    }
+//
+//                    return dto;
+//                })
+//                .collect(Collectors.toList());
+//    }
 
 
     @Override
@@ -238,7 +236,9 @@ public class ReplenishmentQueueServiceImpl implements ReplenishmentQueueService 
                 Location location = locationRepository.findByLocationId(queueItem.getLocationId())
                         .orElseThrow(() -> new ResourceNotFoundException(
                                 "Location not found: " + queueItem.getLocationId()));
-                String supplierLocationId = location.getParentLocationId();
+
+                Optional<Product> product = productRepository.findByProductId(queueItem.getProductId());
+                String supplierLocationId = product.get().getSupplierName();
                 if (supplierLocationId == null) {
                     throw new BadRequestException("Supplier not defined for location: " + queueItem.getLocationId());
                 }
@@ -602,9 +602,8 @@ public class ReplenishmentQueueServiceImpl implements ReplenishmentQueueService 
             LeadTime leadTime = leadTimeRepository
                     .findByProductIdAndLocationIdAndIsActive(buffer.getProductId(), buffer.getLocationId(), true)
                     .orElse(null);
-            Product product = productRepository
-                    .findByProductId(buffer.getProductId())
-                    .orElse(null);
+            Optional<Product> product = productRepository
+                    .findByProductId(buffer.getProductId());
 
             if (consumptionProfile == null || leadTime == null || product == null) {
                 log.debug("Missing data for buffer: {} (Product: {}, Location: {}) - CP: {}, LT: {}, P: {}",
@@ -622,7 +621,7 @@ public class ReplenishmentQueueServiceImpl implements ReplenishmentQueueService 
             Integer bufferDeficit = calculateBufferDeficit(buffer);
             Double daysOfSupply = calculateDaysOfSupply(buffer, consumptionProfile);
             String recommendedAction = determineRecommendedAction(buffer, daysOfSupply, leadTime);
-            Integer recommendedQty = calculateRecommendedQty(bufferDeficit, product.getMoq(), recommendedAction);
+            Integer recommendedQty = calculateRecommendedQty(bufferDeficit, leadTime.getMoq(), recommendedAction);
             Double priorityScore = calculatePriorityScore(buffer, bufferDeficit);
             List<String> reasonCodes = generateReasonCodes(buffer, daysOfSupply, leadTime);
 

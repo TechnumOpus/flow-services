@@ -13,7 +13,6 @@ public interface ProductService {
 
     ProductDTO getProductById(String productId);
 
-    ProductDTO getProductBySkuCode(String skuCode);
 
     ProductDTO getProductByTenantSku(String tenantSku);
 
@@ -39,7 +38,6 @@ public interface ProductService {
 
     boolean existsByProductId(String productId);
 
-    boolean existsBySkuCode(String skuCode);
 
     boolean existsByTenantSku(String tenantSku);
 

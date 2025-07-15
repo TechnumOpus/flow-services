@@ -1,16 +1,11 @@
 package com.onified.distribute.service.impl.order;
 
 import com.onified.distribute.dto.*;
-import com.onified.distribute.entity.InventoryBuffer;
-import com.onified.distribute.entity.InventoryOrderPipeline;
-import com.onified.distribute.entity.Location;
-import com.onified.distribute.entity.ReplenishmentQueue;
+import com.onified.distribute.dto.request.CreateOrdersRequestDTO;
+import com.onified.distribute.entity.*;
 import com.onified.distribute.exception.BadRequestException;
 import com.onified.distribute.exception.ResourceNotFoundException;
-import com.onified.distribute.repository.InventoryBufferRepository;
-import com.onified.distribute.repository.InventoryOrderPipelineRepository;
-import com.onified.distribute.repository.LocationRepository;
-import com.onified.distribute.repository.ReplenishmentQueueRepository;
+import com.onified.distribute.repository.*;
 import com.onified.distribute.service.dbm.InventoryBufferService;
 import com.onified.distribute.service.order.InventoryOrderPipelineService;
 import com.onified.distribute.service.order.ReplenishmentOverrideLogService;
@@ -38,6 +33,7 @@ public class InventoryOrderPipelineServiceImpl implements InventoryOrderPipeline
     private final InventoryBufferService inventoryBufferService;
     private final LocationRepository locationRepository;
     private final ReplenishmentOverrideLogService overrideLogService;
+    private final ProductRepository productRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -172,7 +168,11 @@ public class InventoryOrderPipelineServiceImpl implements InventoryOrderPipeline
                 Location location = locationRepository.findByLocationId(queueItem.getLocationId())
                         .orElseThrow(() -> new ResourceNotFoundException(
                                 "Location not found: " + queueItem.getLocationId()));
-                String supplierLocationId = location.getParentLocationId();
+
+                Optional<Product> product = productRepository.findByProductId(queueItem.getProductId());
+
+                String supplierLocationId = product.get().getSupplierName();
+
                 if (supplierLocationId == null) {
                     throw new BadRequestException("Supplier not defined for location: " + queueItem.getLocationId());
                 }

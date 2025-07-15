@@ -402,7 +402,7 @@ public class BufferThresholdCycleServiceImpl implements BufferThresholdCycleServ
             Optional<Product> product = productRepository.findByProductId(buffer.getProductId());
             if (product.isPresent()) {
                 builder.type("SKU")
-                        .typeName(product.get().getName() != null ? product.get().getName() : product.get().getProductId());
+                        .typeName(product.get().getName() != null ? product.get().getName() : product.get().getSkuCode());
             } else {
                 builder.type("SKU")
                         .typeName(buffer.getProductId());
@@ -473,9 +473,7 @@ public class BufferThresholdCycleServiceImpl implements BufferThresholdCycleServ
     }
 
     private String getOrdinalNumber(Integer day) {
-        if (day == null) {
-            return "1st";
-        }
+        if (day == null) return "1st";
 
         if (day >= 11 && day <= 13) {
             return day + "th";
@@ -490,9 +488,7 @@ public class BufferThresholdCycleServiceImpl implements BufferThresholdCycleServ
     }
 
     private String getDayOfWeek(Integer dayNumber) {
-        if (dayNumber == null) {
-            return "Monday";
-        }
+        if (dayNumber == null) return "Monday";
 
         String[] days = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
         int index = dayNumber % 7;

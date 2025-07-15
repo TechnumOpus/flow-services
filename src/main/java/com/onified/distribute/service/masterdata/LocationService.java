@@ -12,7 +12,6 @@ public interface LocationService {
     LocationDTO getLocationById(String locationId);
     Page<LocationDTO> getAllLocations(Pageable pageable);
     Page<LocationDTO> getActiveLocations(Pageable pageable);
-    Page<LocationDTO> getLocationsByType(String type, Pageable pageable);
     List<LocationDTO> getLocationsByIds(List<String> locationIds);
     LocationDTO activateLocation(String locationId);
     LocationDTO deactivateLocation(String locationId);

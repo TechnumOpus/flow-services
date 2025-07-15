@@ -17,8 +17,6 @@ public interface LocationRepository extends MongoRepository<Location, String> {
     
     Page<Location> findByIsActive(Boolean isActive, Pageable pageable);
     
-    Page<Location> findByType(String type, Pageable pageable);
-
 
     Page<Location> findByRegion(String region, Pageable pageable);
 
@@ -27,10 +25,6 @@ public interface LocationRepository extends MongoRepository<Location, String> {
 
     Optional<Location> findByLocationId(String locationId);
     List<Location> findByLocationIdIn(List<String> locationIds);
-    List<Location> findByIsActiveTrue();
-    List<Location> findByRegionAndIsActive(String region, Boolean isActive);
-    List<Location> findByTypeAndIsActive(String type, Boolean isActive);
-
 
     // For partial matching
     @Query("{'region': {$regex: ?0, $options: 'i'}}")

@@ -1,5 +1,8 @@
-package com.onified.distribute.dto;
+package com.onified.distribute.dto.response;
 
+import com.onified.distribute.dto.ConsumptionProfileDTO;
+import com.onified.distribute.dto.DailyConsumptionLogDTO;
+import com.onified.distribute.dto.InventoryBufferDTO;
 import lombok.Data;
 import org.springframework.data.domain.Page;
 

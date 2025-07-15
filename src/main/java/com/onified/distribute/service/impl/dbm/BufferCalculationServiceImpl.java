@@ -1,7 +1,7 @@
 package com.onified.distribute.service.impl.dbm;
 
-import com.onified.distribute.dto.BufferCalculationRequestDTO;
-import com.onified.distribute.dto.BufferCalculationResponseDTO;
+import com.onified.distribute.dto.request.BufferCalculationRequestDTO;
+import com.onified.distribute.dto.response.BufferCalculationResponseDTO;
 import com.onified.distribute.entity.ConsumptionProfile;
 import com.onified.distribute.entity.LeadTime;
 import com.onified.distribute.repository.ConsumptionProfileRepository;

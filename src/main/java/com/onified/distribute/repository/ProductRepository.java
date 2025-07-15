@@ -16,8 +16,6 @@ public interface ProductRepository extends MongoRepository<Product, String> {
 
     boolean existsByProductId(String productId);
 
-    boolean existsBySkuCode(String skuCode);
-
     boolean existsByTenantSku(String tenantSku);
 
     boolean existsBySupplierSku(String supplierSku);
@@ -25,7 +23,6 @@ public interface ProductRepository extends MongoRepository<Product, String> {
     Page<Product> findByIsActive(Boolean isActive, Pageable pageable);
 
     Page<Product> findByCategory(String category, Pageable pageable);
-
 
     @Query(value = "{'category': ?0, 'isActive': true}", fields = "{'productId': 1}")
     List<Product> findProductIdsByCategory(String category);
@@ -36,10 +33,8 @@ public interface ProductRepository extends MongoRepository<Product, String> {
 
     Optional<Product> findByProductId(String productId);
     List<Product> findByProductIdIn(List<String> productIds);
-    Optional<Product> findBySkuCode(String skuCode);
     Optional<Product> findByTenantSku(String tenantSku);
     List<Product> findByIsActiveTrue();
-
 
     @Query(value = "{'category': ?0, 'isActive': true}")
     Page<Product> findActiveByCategoryIgnoreCase(String category, Pageable pageable);

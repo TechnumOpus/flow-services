@@ -1,6 +1,6 @@
 package com.onified.distribute.service.impl.consumption;
 
-import com.onified.distribute.dto.BufferConsumptionResponseDTO;
+import com.onified.distribute.dto.response.BufferConsumptionResponseDTO;
 import com.onified.distribute.dto.ConsumptionProfileDTO;
 import com.onified.distribute.dto.DailyConsumptionLogDTO;
 import com.onified.distribute.dto.InventoryBufferDTO;

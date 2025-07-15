@@ -12,8 +12,8 @@ public class ProductDTO {
 
     private String productId;
 
-    @NotBlank(message = "SKU Code is required")
-    private String skuCode;
+    @NotBlank(message = "supplier name is required")
+    private String supplierName;
 
     @NotBlank(message = "Tenant SKU is required")
     private String tenantSku;
@@ -32,11 +32,6 @@ public class ProductDTO {
     @NotBlank(message = "UOM is required")
     private String uom;
 
-    @Positive(message = "MOQ must be positive")
-    private Integer moq;
-
-    @Positive(message = "Unit cost must be positive")
-    private Double unitCost;
 
     private Boolean isActive;
 

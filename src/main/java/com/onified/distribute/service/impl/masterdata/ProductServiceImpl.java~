@@ -194,7 +194,7 @@ public class ProductServiceImpl implements ProductService {
     private void validateUniqueSkuCodes(ProductDTO productDto, Product existingProduct) {
         // Check SKU Code uniqueness
         if (existingProduct == null || !existingProduct.getProductId().equals(productDto.getProductId())) {
-            if (productRepository.existsByProductId(productDto.getProductId())) {
+            if (productRepository.existsBySkuCode(productDto.getProductId())) {
                 throw new ProductAlreadyExistsException("SKU Code already exists: " + productDto.getProductId());
             }
         }

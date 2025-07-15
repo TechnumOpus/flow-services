@@ -5,7 +5,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDateTime;
-import com.onified.distribute.dto.BufferConsumptionResponseDTO;
+import com.onified.distribute.dto.response.BufferConsumptionResponseDTO;
 
 public interface ConsumptionProfileService {
 

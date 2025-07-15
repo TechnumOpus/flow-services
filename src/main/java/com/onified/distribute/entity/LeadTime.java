@@ -28,11 +28,9 @@ public class LeadTime {
     private Double orderLeadTime;
     private Double manufacturingTime;
     private Double transportTime;
-    private Double leadTimeVariability;
-    private Double onTimeDeliveryPct;
 
-    private LocalDateTime effectiveFrom;
-    private LocalDateTime effectiveTo;
+    private Integer moq;
+
 
     @Indexed
     private Boolean isActive;

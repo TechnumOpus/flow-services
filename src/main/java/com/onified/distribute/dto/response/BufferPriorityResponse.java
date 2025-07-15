@@ -1,4 +1,4 @@
-package com.onified.distribute.dto;
+package com.onified.distribute.dto.response;
 
 import lombok.Builder;
 import lombok.Data;

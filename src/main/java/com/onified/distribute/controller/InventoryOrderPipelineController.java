@@ -1,6 +1,6 @@
 package com.onified.distribute.controller;
 
-import com.onified.distribute.dto.CreateOrdersRequestDTO;
+import com.onified.distribute.dto.request.CreateOrdersRequestDTO;
 import com.onified.distribute.dto.InventoryOrderPipelineDTO;
 import com.onified.distribute.service.order.InventoryOrderPipelineService;
 import lombok.RequiredArgsConstructor;

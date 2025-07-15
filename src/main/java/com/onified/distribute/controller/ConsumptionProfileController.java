@@ -1,6 +1,6 @@
 package com.onified.distribute.controller;
 
-import com.onified.distribute.dto.BufferConsumptionResponseDTO;
+import com.onified.distribute.dto.response.BufferConsumptionResponseDTO;
 import com.onified.distribute.dto.ConsumptionProfileDTO;
 import com.onified.distribute.service.consumption.ConsumptionProfileService;
 import lombok.RequiredArgsConstructor;

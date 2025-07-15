@@ -63,7 +63,6 @@ public class LeadTimeServiceImpl implements LeadTimeService {
                         leadTimeDto.getProductId(), leadTimeDto.getLocationId(), true)
                 .ifPresent(existing -> {
                     existing.setIsActive(false);
-                    existing.setEffectiveTo(LocalDateTime.now());
                     existing.setUpdatedAt(LocalDateTime.now());
                     leadTimeRepository.save(existing);
                     log.info("Deactivated existing lead time for product: {} at location: {}",
@@ -71,7 +70,6 @@ public class LeadTimeServiceImpl implements LeadTimeService {
                 });
 
         LeadTime leadTime = mapToEntity(leadTimeDto);
-        leadTime.setEffectiveFrom(LocalDateTime.now());
         leadTime.setIsActive(true);
         leadTime.setCreatedAt(LocalDateTime.now());
         leadTime.setUpdatedAt(LocalDateTime.now());
@@ -137,7 +135,6 @@ public class LeadTimeServiceImpl implements LeadTimeService {
         if (updateDto.getMoq() != null) {
             Product product = productRepository.findByProductId(leadTime.getProductId())
                     .orElseThrow(() -> new IllegalArgumentException("Product not found: " + leadTime.getProductId()));
-            product.setMoq(updateDto.getMoq());
             product.setUpdatedAt(LocalDateTime.now());
             product.setUpdatedBy(updateDto.getUpdatedBy());
             productRepository.save(product);
@@ -189,15 +186,12 @@ public class LeadTimeServiceImpl implements LeadTimeService {
                 .ifPresent(existing -> {
                     if (!existing.getId().equals(id)) {
                         existing.setIsActive(false);
-                        existing.setEffectiveTo(LocalDateTime.now());
                         existing.setUpdatedAt(LocalDateTime.now());
                         leadTimeRepository.save(existing);
                     }
                 });
 
         leadTime.setIsActive(true);
-        leadTime.setEffectiveFrom(LocalDateTime.now());
-        leadTime.setEffectiveTo(null);
         leadTime.setUpdatedAt(LocalDateTime.now());
 
         LeadTime savedLeadTime = leadTimeRepository.save(leadTime);
@@ -222,7 +216,6 @@ public class LeadTimeServiceImpl implements LeadTimeService {
                 .orElseThrow(() -> new IllegalArgumentException("Lead time not found: " + id));
 
         leadTime.setIsActive(false);
-        leadTime.setEffectiveTo(LocalDateTime.now());
         leadTime.setUpdatedAt(LocalDateTime.now());
 
         LeadTime savedLeadTime = leadTimeRepository.save(leadTime);
@@ -379,15 +372,12 @@ public class LeadTimeServiceImpl implements LeadTimeService {
                 .tenantSku(product != null ? product.getTenantSku() : null)
                 .supplierSku(product != null ? product.getSupplierSku() : null)
                 .supplierName(supplier != null ? supplier.getSupplierName() : null)
-                .moq(product != null ? product.getMoq() : null)
+                .moq(leadTime.getMoq())
                 .orderLeadTime(leadTime.getOrderLeadTime())
                 .manufacturingTime(leadTime.getManufacturingTime())
                 .transportTime(leadTime.getTransportTime())
                 .totalLeadTimeDays(totalLeadTime)
-                .leadTimeVariability(leadTime.getLeadTimeVariability())
-                .onTimeDeliveryPct(leadTime.getOnTimeDeliveryPct())
-                .effectiveFrom(leadTime.getEffectiveFrom())
-                .effectiveTo(leadTime.getEffectiveTo())
+
                 .isActive(leadTime.getIsActive())
                 .updatedAt(leadTime.getUpdatedAt())
                 .updatedBy(leadTime.getUpdatedBy())
@@ -488,8 +478,7 @@ public class LeadTimeServiceImpl implements LeadTimeService {
         leadTime.setOrderLeadTime(dto.getOrderLeadTime());
         leadTime.setManufacturingTime(dto.getManufacturingTime());
         leadTime.setTransportTime(dto.getTransportTime());
-        leadTime.setLeadTimeVariability(dto.getLeadTimeVariability());
-        leadTime.setOnTimeDeliveryPct(dto.getOnTimeDeliveryPct());
+        leadTime.setMoq(dto.getMoq());
         leadTime.setUpdatedBy(dto.getUpdatedBy());
         return leadTime;
     }
@@ -503,10 +492,7 @@ public class LeadTimeServiceImpl implements LeadTimeService {
         dto.setOrderLeadTime(entity.getOrderLeadTime());
         dto.setManufacturingTime(entity.getManufacturingTime());
         dto.setTransportTime(entity.getTransportTime());
-        dto.setLeadTimeVariability(entity.getLeadTimeVariability());
-        dto.setOnTimeDeliveryPct(entity.getOnTimeDeliveryPct());
-        dto.setEffectiveFrom(entity.getEffectiveFrom());
-        dto.setEffectiveTo(entity.getEffectiveTo());
+        dto.setMoq(entity.getMoq());
         dto.setIsActive(entity.getIsActive());
         dto.setUpdatedAt(entity.getUpdatedAt());
         dto.setUpdatedBy(entity.getUpdatedBy());
@@ -518,8 +504,7 @@ public class LeadTimeServiceImpl implements LeadTimeService {
         entity.setOrderLeadTime(dto.getOrderLeadTime());
         entity.setManufacturingTime(dto.getManufacturingTime());
         entity.setTransportTime(dto.getTransportTime());
-        entity.setLeadTimeVariability(dto.getLeadTimeVariability());
-        entity.setOnTimeDeliveryPct(dto.getOnTimeDeliveryPct());
+        entity.setMoq(dto.getMoq());
         entity.setUpdatedBy(dto.getUpdatedBy());
     }
 }

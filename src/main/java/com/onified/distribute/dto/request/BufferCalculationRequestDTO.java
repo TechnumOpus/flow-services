@@ -1,4 +1,4 @@
-package com.onified.distribute.dto;
+package com.onified.distribute.dto.request;
 
 import lombok.Data;
 import jakarta.validation.constraints.NotBlank;
