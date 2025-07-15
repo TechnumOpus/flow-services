@@ -25,8 +25,8 @@ public class ProductAttributeController {
 
     @PostMapping
     public ResponseEntity<ProductAttributeDTO> createProductAttribute(@Valid @RequestBody ProductAttributeDTO attributeDto) {
-        log.info("Creating product attribute: {} for product: {}",
-                attributeDto.getAttributeName(), attributeDto.getProductId());
+        log.info("Creating product attribute: {} for product: {} at location: {}", 
+                attributeDto.getAttributeName(), attributeDto.getProductId(), attributeDto.getLocationId());
         ProductAttributeDTO createdAttribute = productAttributeService.createProductAttribute(attributeDto);
         return new ResponseEntity<>(createdAttribute, HttpStatus.CREATED);
     }
@@ -63,7 +63,23 @@ public class ProductAttributeController {
         return ResponseEntity.ok(attributes);
     }
 
+    @GetMapping("/location/{locationId}")
+    public ResponseEntity<Page<ProductAttributeDTO>> getProductAttributesByLocation(
+            @PathVariable String locationId,
+            Pageable pageable) {
+        log.info("Fetching product attributes by location: {}", locationId);
+        Page<ProductAttributeDTO> attributes = productAttributeService.getProductAttributesByLocation(locationId, pageable);
+        return ResponseEntity.ok(attributes);
+    }
 
+    @GetMapping("/product/{productId}/location/{locationId}")
+    public ResponseEntity<List<ProductAttributeDTO>> getProductAttributesByProductAndLocation(
+            @PathVariable String productId,
+            @PathVariable String locationId) {
+        log.info("Fetching product attributes for product: {} at location: {}", productId, locationId);
+        List<ProductAttributeDTO> attributes = productAttributeService.getProductAttributesByProductAndLocation(productId, locationId);
+        return ResponseEntity.ok(attributes);
+    }
 
     @GetMapping("/name/{attributeName}")
     public ResponseEntity<Page<ProductAttributeDTO>> getProductAttributesByName(
@@ -74,7 +90,16 @@ public class ProductAttributeController {
         return ResponseEntity.ok(attributes);
     }
 
-
+    @GetMapping("/product/{productId}/location/{locationId}/attribute/{attributeName}/value")
+    public ResponseEntity<String> getProductAttributeValue(
+            @PathVariable String productId,
+            @PathVariable String locationId,
+            @PathVariable String attributeName) {
+        log.info("Fetching attribute value for product: {} at location: {} for attribute: {}", 
+                productId, locationId, attributeName);
+        String value = productAttributeService.getProductAttributeValue(productId, locationId, attributeName);
+        return ResponseEntity.ok(value);
+    }
 
     @DeleteMapping("/{attributeId}")
     public ResponseEntity<Void> deleteProductAttribute(@PathVariable String attributeId) {

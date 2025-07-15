@@ -93,10 +93,10 @@ public class ReplenishmentQueueServiceImpl implements ReplenishmentQueueService 
         dto.setReasonCodes(queue.getReasonCodes());
 
         // Fetch product details for MOQ and name
-        Product product = productRepository.findByProductId(queue.getProductId());
+        Optional<Product> product = productRepository.findByProductId(queue.getProductId());
 
-        if (product != null) {
-            dto.setProductName(product.getName());
+        if (product.isPresent()) {
+            dto.setProductName(String.valueOf(product.get().getName()));
         } else {
             dto.setMoq(0);
             dto.setProductName("Unknown Product");
@@ -237,8 +237,8 @@ public class ReplenishmentQueueServiceImpl implements ReplenishmentQueueService 
                         .orElseThrow(() -> new ResourceNotFoundException(
                                 "Location not found: " + queueItem.getLocationId()));
 
-                Product product = productRepository.findByProductId(queueItem.getProductId());
-                String supplierLocationId = product.getSupplierName();
+                Optional<Product> product = productRepository.findByProductId(queueItem.getProductId());
+                String supplierLocationId = product.get().getSupplierName();
                 if (supplierLocationId == null) {
                     throw new BadRequestException("Supplier not defined for location: " + queueItem.getLocationId());
                 }
@@ -602,7 +602,7 @@ public class ReplenishmentQueueServiceImpl implements ReplenishmentQueueService 
             LeadTime leadTime = leadTimeRepository
                     .findByProductIdAndLocationIdAndIsActive(buffer.getProductId(), buffer.getLocationId(), true)
                     .orElse(null);
-            Product product = productRepository
+            Optional<Product> product = productRepository
                     .findByProductId(buffer.getProductId());
 
             if (consumptionProfile == null || leadTime == null || product == null) {

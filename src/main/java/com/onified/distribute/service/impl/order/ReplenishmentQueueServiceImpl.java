@@ -92,28 +92,39 @@ public class ReplenishmentQueueServiceImpl implements ReplenishmentQueueService 
         dto.setQueueDate(queue.getQueueDate());
         dto.setReasonCodes(queue.getReasonCodes());
 
-        // Fetch product details for MOQ and name
+        // Fetch product details
         Optional<Product> product = productRepository.findByProductId(queue.getProductId());
-
         if (product.isPresent()) {
-            dto.setProductName(String.valueOf(product.get().getName()));
+            dto.setProductName(product.get().getName());
         } else {
-            dto.setMoq(0);
             dto.setProductName("Unknown Product");
         }
-        LeadTime leadTime = leadTimeRepository.findByProductId(queue.getProductId());
-        int moq = leadTime.getMoq();
+
+        // Fetch lead time and MOQ
+        int moq = 0;
+        try {
+            Optional<LeadTime> leadTimeOpt = leadTimeRepository.findByProductIdAndLocationIdAndIsActive(
+                    queue.getProductId(), queue.getLocationId(), true);
+            if (leadTimeOpt.isPresent()) {
+                moq = leadTimeOpt.get().getMoq() != null ? leadTimeOpt.get().getMoq() : 0;
+            } else {
+                log.warn("No active LeadTime found for productId: {}, locationId: {}",
+                        queue.getProductId(), queue.getLocationId());
+            }
+            dto.setMoq(moq);
+        } catch (Exception e) {
+            log.error("Error fetching LeadTime for productId: {}, locationId: {}: {}",
+                    queue.getProductId(), queue.getLocationId(), e.getMessage());
+            dto.setMoq(0);
+        }
+
+        // Calculate final quantity
         int naq = queue.getNetAvailableQty();
         int bu = queue.getBufferUnits();
         int fq = bu - naq;
+        dto.setFinalQuantity(fq < moq ? moq : fq);
 
-        if (fq < moq) {
-            dto.setFinalQuantity(moq);
-        } else {
-            dto.setFinalQuantity(fq);
-        }
-
-        // Fetch location details for name
+        // Fetch location details
         Optional<Location> location = locationRepository.findByLocationId(queue.getLocationId());
         if (location.isPresent()) {
             dto.setLocationName(location.get().getName());

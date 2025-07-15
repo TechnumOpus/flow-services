@@ -18,15 +18,9 @@ public interface ProductAttributeRepository extends MongoRepository<ProductAttri
     boolean existsByAttributeId(String attributeId);
     
     Page<ProductAttribute> findByProductId(String productId, Pageable pageable);
-    
-    Page<ProductAttribute> findByLocationId(String locationId, Pageable pageable);
-    
-    List<ProductAttribute> findByProductIdAndLocationId(String productId, String locationId);
+
+    List<ProductAttribute> findByProductId(String productId);
     
     Page<ProductAttribute> findByAttributeName(String attributeName, Pageable pageable);
-    
-
-    Optional<ProductAttribute> findByProductIdAndLocationIdAndAttributeName(String productId, String locationId, String attributeName);
-
 
 }

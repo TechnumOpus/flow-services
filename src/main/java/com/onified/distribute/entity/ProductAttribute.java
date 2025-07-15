@@ -17,17 +17,11 @@ public class ProductAttribute {
     private String id;
     private String attributeId;
     private String productId;
-    private String locationId;
     @Indexed
     private String attributeName;
     private String attributeValue;
-    private String attributeType;
     private String attributeCategory;
-    private Boolean isSearchable;
-    private Boolean isMandatory;
-    private List<String> applicableLocations;
-    private LocalDateTime effectiveFrom;
-    private LocalDateTime effectiveTo;
+
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private String createdBy;

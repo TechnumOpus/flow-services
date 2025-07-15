@@ -12,10 +12,7 @@ public interface ProductAttributeService {
     ProductAttributeDTO getProductAttributeById(String attributeId);
     Page<ProductAttributeDTO> getAllProductAttributes(Pageable pageable);
     Page<ProductAttributeDTO> getProductAttributesByProduct(String productId, Pageable pageable);
-    Page<ProductAttributeDTO> getProductAttributesByLocation(String locationId, Pageable pageable);
-    List<ProductAttributeDTO> getProductAttributesByProductAndLocation(String productId, String locationId);
     Page<ProductAttributeDTO> getProductAttributesByName(String attributeName, Pageable pageable);
-    String getProductAttributeValue(String productId, String locationId, String attributeName);
     void deleteProductAttribute(String attributeId);
     void deleteProductAttributesByProduct(String productId);
 }

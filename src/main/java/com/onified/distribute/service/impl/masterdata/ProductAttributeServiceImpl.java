@@ -26,8 +26,8 @@ public class ProductAttributeServiceImpl implements ProductAttributeService {
 
     @Override
     public ProductAttributeDTO createProductAttribute(ProductAttributeDTO attributeDto) {
-        log.info("Creating product attribute: {} for product: {} at location: {}", 
-                attributeDto.getAttributeName(), attributeDto.getProductId(), attributeDto.getLocationId());
+        log.info("Creating product attribute: {} for product: {}}",
+                attributeDto.getAttributeName(), attributeDto.getProductId());
         
         if (attributeDto.getAttributeId() != null && 
             productAttributeRepository.existsByAttributeId(attributeDto.getAttributeId())) {
@@ -84,20 +84,7 @@ public class ProductAttributeServiceImpl implements ProductAttributeService {
         return productAttributeRepository.findByProductId(productId, pageable).map(this::mapToDto);
     }
 
-    @Override
-    @Transactional(readOnly = true)
-    public Page<ProductAttributeDTO> getProductAttributesByLocation(String locationId, Pageable pageable) {
-        return productAttributeRepository.findByLocationId(locationId, pageable).map(this::mapToDto);
-    }
 
-    @Override
-    @Transactional(readOnly = true)
-    public List<ProductAttributeDTO> getProductAttributesByProductAndLocation(String productId, String locationId) {
-        return productAttributeRepository.findByProductIdAndLocationId(productId, locationId)
-            .stream()
-            .map(this::mapToDto)
-            .collect(Collectors.toList());
-    }
 
     @Override
     @Transactional(readOnly = true)
@@ -105,14 +92,6 @@ public class ProductAttributeServiceImpl implements ProductAttributeService {
         return productAttributeRepository.findByAttributeName(attributeName, pageable).map(this::mapToDto);
     }
 
-    @Override
-    @Transactional(readOnly = true)
-    public String getProductAttributeValue(String productId, String locationId, String attributeName) {
-        return productAttributeRepository.findByProductIdAndLocationIdAndAttributeName(
-            productId, locationId, attributeName)
-            .map(ProductAttribute::getAttributeValue)
-            .orElse(null);
-    }
 
     @Override
     public void deleteProductAttribute(String attributeId) {
@@ -139,11 +118,8 @@ public class ProductAttributeServiceImpl implements ProductAttributeService {
         ProductAttribute attribute = new ProductAttribute();
         attribute.setAttributeId(dto.getAttributeId());
         attribute.setProductId(dto.getProductId());
-        attribute.setLocationId(dto.getLocationId());
         attribute.setAttributeName(dto.getAttributeName());
         attribute.setAttributeValue(dto.getAttributeValue());
-        attribute.setAttributeType(dto.getAttributeType());
-        attribute.setIsMandatory(dto.getIsMandatory() != null ? dto.getIsMandatory() : false);
         attribute.setCreatedBy(dto.getCreatedBy());
         attribute.setUpdatedBy(dto.getUpdatedBy());
         return attribute;
@@ -154,11 +130,8 @@ public class ProductAttributeServiceImpl implements ProductAttributeService {
         dto.setId(entity.getId());
         dto.setAttributeId(entity.getAttributeId());
         dto.setProductId(entity.getProductId());
-        dto.setLocationId(entity.getLocationId());
         dto.setAttributeName(entity.getAttributeName());
         dto.setAttributeValue(entity.getAttributeValue());
-        dto.setAttributeType(entity.getAttributeType());
-        dto.setIsMandatory(entity.getIsMandatory());
         dto.setCreatedAt(entity.getCreatedAt());
         dto.setUpdatedAt(entity.getUpdatedAt());
         dto.setCreatedBy(entity.getCreatedBy());
@@ -168,13 +141,9 @@ public class ProductAttributeServiceImpl implements ProductAttributeService {
 
     private void updateEntityFromDto(ProductAttribute entity, ProductAttributeDTO dto) {
         entity.setProductId(dto.getProductId());
-        entity.setLocationId(dto.getLocationId());
         entity.setAttributeName(dto.getAttributeName());
         entity.setAttributeValue(dto.getAttributeValue());
-        entity.setAttributeType(dto.getAttributeType());
-        if (dto.getIsMandatory() != null) {
-            entity.setIsMandatory(dto.getIsMandatory());
-        }
+
         entity.setUpdatedBy(dto.getUpdatedBy());
     }
 }
