@@ -262,6 +262,7 @@ public class ProductServiceImpl implements ProductService {
         entity.setProductId(dto.getProductId());
         entity.setTenantSku(dto.getTenantSku());
         entity.setSupplierSku(dto.getSupplierSku());
+        entity.setSupplierName(dto.getSupplierName());
         entity.setName(dto.getName());
         entity.setCategory(dto.getCategory());
         entity.setSubcategory(dto.getSubcategory());
