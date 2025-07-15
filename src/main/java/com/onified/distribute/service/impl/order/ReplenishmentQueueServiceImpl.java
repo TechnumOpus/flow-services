@@ -76,6 +76,7 @@ public class ReplenishmentQueueServiceImpl implements ReplenishmentQueueService 
 
     private ReplenishmentQueueResponseDTO convertToEnhancedDto(ReplenishmentQueue queue) {
         ReplenishmentQueueResponseDTO dto = new ReplenishmentQueueResponseDTO();
+
         dto.setId(queue.getId());
         dto.setQueueId(queue.getQueueId());
         dto.setProductId(queue.getProductId());
@@ -88,32 +89,19 @@ public class ReplenishmentQueueServiceImpl implements ReplenishmentQueueService 
         dto.setDaysOfSupply(queue.getDaysOfSupply());
         dto.setBufferZone(queue.getBufferZone());
         dto.setRecommendedAction(queue.getRecommendedAction());
+        dto.setPriorityScore(queue.getPriorityScore());
         dto.setStatus(queue.getStatus());
         dto.setQueueDate(queue.getQueueDate());
         dto.setReasonCodes(queue.getReasonCodes());
 
         // Fetch product details for MOQ and name
         Optional<Product> product = productRepository.findByProductId(queue.getProductId());
-        int moq = 0; // Default MOQ
-
         if (product.isPresent()) {
-            moq = product.get().getMoq();
-            dto.setMoq(moq);
+            dto.setMoq(product.get().getMoq());
             dto.setProductName(product.get().getName());
         } else {
             dto.setMoq(0);
             dto.setProductName("Unknown Product");
-        }
-
-        // Calculate final quantity
-        int naq = queue.getNetAvailableQty();
-        int bu = queue.getBufferUnits();
-        int fq = bu - naq;
-
-        if (fq < moq) {
-            dto.setFinalQuantity(moq);
-        } else {
-            dto.setFinalQuantity(fq);
         }
 
         // Fetch location details for name
@@ -127,8 +115,6 @@ public class ReplenishmentQueueServiceImpl implements ReplenishmentQueueService 
         return dto;
     }
 
-
-    // Batch conversion method for better performance
     // Batch conversion method for better performance
     private List<ReplenishmentQueueResponseDTO> convertToEnhancedDtoBatch(List<ReplenishmentQueue> queues) {
         // Get unique product IDs and location IDs
@@ -175,28 +161,14 @@ public class ReplenishmentQueueServiceImpl implements ReplenishmentQueueService 
                     dto.setQueueDate(queue.getQueueDate());
                     dto.setReasonCodes(queue.getReasonCodes());
 
-                    // Set product details and calculate final quantity
+                    // Set product details
                     Product product = productMap.get(queue.getProductId());
-                    int moq = 0; // Default MOQ
-
                     if (product != null) {
-                        moq = product.getMoq();
-                        dto.setMoq(moq);
+                        dto.setMoq(product.getMoq());
                         dto.setProductName(product.getName());
                     } else {
                         dto.setMoq(0);
                         dto.setProductName("Unknown Product");
-                    }
-
-                    // Calculate final quantity (same logic as in convertToEnhancedDto)
-                    int naq = queue.getNetAvailableQty() != null ? queue.getNetAvailableQty() : 0;
-                    int bu = queue.getBufferUnits() != null ? queue.getBufferUnits() : 0;
-                    int fq = bu - naq;
-
-                    if (fq < moq) {
-                        dto.setFinalQuantity(moq);
-                    } else {
-                        dto.setFinalQuantity(fq);
                     }
 
                     // Set location details
@@ -211,7 +183,6 @@ public class ReplenishmentQueueServiceImpl implements ReplenishmentQueueService 
                 })
                 .collect(Collectors.toList());
     }
-
 
     @Override
     public void processReplenishmentQueue() {

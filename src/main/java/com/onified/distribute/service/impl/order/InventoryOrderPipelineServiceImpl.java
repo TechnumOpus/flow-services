@@ -1,6 +1,8 @@
 package com.onified.distribute.service.impl.order;
 
-import com.onified.distribute.dto.*;
+import com.onified.distribute.dto.CreateOrdersRequestDTO;
+import com.onified.distribute.dto.InventoryOrderPipelineDTO;
+import com.onified.distribute.dto.ReplenishmentOverrideLogDTO;
 import com.onified.distribute.entity.InventoryBuffer;
 import com.onified.distribute.entity.InventoryOrderPipeline;
 import com.onified.distribute.entity.Location;
@@ -25,6 +27,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
+
+import com.onified.distribute.dto.InventoryBufferDTO;
 
 @Slf4j
 @Service
@@ -193,7 +197,7 @@ public class InventoryOrderPipelineServiceImpl implements InventoryOrderPipeline
                             queueItem.getQueueId(), queue.getRecommendedQty(), queueItem.getFinalQuantity());
                 }
 
-                ReplenishmentQueueResponseDTO dto = new ReplenishmentQueueResponseDTO();
+                // Create order
                 InventoryOrderPipelineDTO orderDTO = new InventoryOrderPipelineDTO();
                 String orderId = "ORD-" + UUID.randomUUID();
                 orderDTO.setOrderId(orderId);

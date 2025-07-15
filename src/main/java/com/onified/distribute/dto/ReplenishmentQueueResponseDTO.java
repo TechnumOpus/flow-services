@@ -21,7 +21,6 @@ public class ReplenishmentQueueResponseDTO {
     private Integer inPipeline; // inPipelineQty
     private Integer netAvailability; // netAvailableQty
     private Integer bufferGap;
-    private Integer finalQuantity;
     private Integer moq; // from products collection
     private Double daysOfSupply;
     private String bufferZone;

@@ -14,4 +14,6 @@ public interface IdentityServiceClient {
 
     @GetMapping("/api/v1/auth/extract-username")
     Map<String, String> extractUsername(@RequestHeader("Authorization") String token);
+
+
 }
