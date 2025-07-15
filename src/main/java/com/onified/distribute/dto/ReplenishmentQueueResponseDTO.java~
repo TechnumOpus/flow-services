@@ -1,4 +1,0 @@
-package com.onified.distribute.dto;
-
-public class ReplenishmentQueueResponseDTO {
-}
