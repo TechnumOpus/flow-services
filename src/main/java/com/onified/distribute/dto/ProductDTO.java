@@ -24,7 +24,6 @@ public class ProductDTO {
     @NotBlank(message = "Product name is required")
     private String name;
 
-    @NotBlank(message = "Category is required")
     private String category;
 
     private String subcategory;
