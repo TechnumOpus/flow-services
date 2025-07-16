@@ -228,6 +228,7 @@ public class ProductServiceImpl implements ProductService {
         product.setProductId(dto.getProductId());
         product.setTenantSku(dto.getTenantSku());
         product.setSupplierSku(dto.getSupplierSku());
+        product.setSupplierName(dto.getSupplierName());
         product.setName(dto.getName());
         product.setCategory(dto.getCategory());
         product.setSubcategory(dto.getSubcategory());
@@ -245,6 +246,7 @@ public class ProductServiceImpl implements ProductService {
         dto.setProductId(entity.getProductId());
         dto.setTenantSku(entity.getTenantSku());
         dto.setSupplierSku(entity.getSupplierSku());
+        dto.setSupplierName(entity.getSupplierName());
         dto.setName(entity.getName());
         dto.setCategory(entity.getCategory());
         dto.setSubcategory(entity.getSubcategory());
@@ -262,6 +264,7 @@ public class ProductServiceImpl implements ProductService {
         entity.setProductId(dto.getProductId());
         entity.setTenantSku(dto.getTenantSku());
         entity.setSupplierSku(dto.getSupplierSku());
+        entity.setSupplierName(dto.getSupplierName());
         entity.setSupplierName(dto.getSupplierName());
         entity.setName(dto.getName());
         entity.setCategory(dto.getCategory());
