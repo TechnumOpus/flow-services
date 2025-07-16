@@ -174,7 +174,7 @@ public class InventoryOrderPipelineServiceImpl implements InventoryOrderPipeline
                 String supplierLocationId = product.get().getSupplierName();
 
                 if (supplierLocationId == null) {
-                    throw new BadRequestException("Supplier not defined for location: " + queueItem.getLocationId());
+                    throw new BadRequestException("Supplier not defined for Products: " + product.get().getSupplierName());
                 }
 
                 // Log override if finalQuantity differs from recommendedQty
