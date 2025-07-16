@@ -14,7 +14,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -28,11 +27,12 @@ public class InventoryBufferServiceImpl implements InventoryBufferService {
     private final BufferAdjustmentLogService bufferAdjustmentLogService;
 
     @Override
-    public InventoryBufferDTO getBufferByProductAndLocation(String productId, String locationId){
-
-
-        return inventoryBufferRepository.findByProductIdAndLocationId(productId, locationId).map(this::convertToDto).orElse(null);
+    public InventoryBufferDTO getBufferByProductAndLocation(String productId, String locationId) {
+        return inventoryBufferRepository.findByProductIdAndLocationId(productId, locationId)
+                .map(this::convertToDto)
+                .orElse(null);
     }
+
     @Override
     public InventoryBufferDTO createInventoryBuffer(InventoryBufferDTO bufferDto) {
         log.info("Creating inventory buffer for product: {} at location: {}",
@@ -68,6 +68,19 @@ public class InventoryBufferServiceImpl implements InventoryBufferService {
 
         InventoryBuffer savedBuffer = inventoryBufferRepository.save(existingBuffer);
         return convertToDto(savedBuffer);
+    }
+
+    @Override
+    public void deactivateBufferByProductAndLocation(String productId, String locationId) {
+        log.info("Deactivating buffer for product: {} at location: {}", productId, locationId);
+        InventoryBuffer buffer = inventoryBufferRepository.findByProductIdAndLocationId(productId, locationId)
+                .orElse(null);
+        if (buffer != null) {
+            buffer.setIsActive(false);
+            buffer.setUpdatedAt(LocalDateTime.now());
+            inventoryBufferRepository.save(buffer);
+            log.info("Buffer deactivated successfully for product: {} at location: {}", productId, locationId);
+        }
     }
 
     @Override
@@ -208,7 +221,7 @@ public class InventoryBufferServiceImpl implements InventoryBufferService {
 
     private InventoryBuffer calculateZone(InventoryBuffer buffer) {
         if (buffer.getBufferUnits() == null || buffer.getBufferUnits() == 0) {
-            buffer.setCurrentZone("UNKNOWN");
+            buffer.setCurrentZone("GREEN");
             buffer.setBufferConsumedPct(0.0);
             return buffer;
         }
@@ -222,6 +235,7 @@ public class InventoryBufferServiceImpl implements InventoryBufferService {
         double consumedPct = ((double) (buffer.getBufferUnits() - netAvailable) / buffer.getBufferUnits()) * 100;
         buffer.setBufferConsumedPct(Math.max(0, Math.min(100, consumedPct)));
 
+        // Use threshold percentages for zone determination
         if (consumedPct <= (100 - buffer.getGreenThresholdPct())) {
             buffer.setCurrentZone("GREEN");
         } else if (consumedPct <= (100 - buffer.getYellowThresholdPct())) {

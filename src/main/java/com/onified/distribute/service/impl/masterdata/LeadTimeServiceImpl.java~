@@ -1,21 +1,18 @@
 package com.onified.distribute.service.impl.masterdata;
 
-import com.onified.distribute.dto.InventoryBufferDTO;
 import com.onified.distribute.dto.LeadTimeDTO;
 import com.onified.distribute.dto.response.LeadTimeResponseDTO;
 import com.onified.distribute.dto.request.LeadTimeUpdateDTO;
-import com.onified.distribute.entity.ConsumptionProfile;
 import com.onified.distribute.entity.LeadTime;
 import com.onified.distribute.entity.Product;
 import com.onified.distribute.entity.Supplier;
 import com.onified.distribute.entity.Location;
-import com.onified.distribute.repository.ConsumptionProfileRepository;
 import com.onified.distribute.repository.LeadTimeRepository;
 import com.onified.distribute.repository.ProductRepository;
 import com.onified.distribute.repository.SupplierRepository;
 import com.onified.distribute.repository.LocationRepository;
-import com.onified.distribute.service.dbm.InventoryBufferService;
 import com.onified.distribute.service.masterdata.LeadTimeService;
+import com.onified.distribute.scheduler.BufferCreationScheduler;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -27,7 +24,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.function.Function;
 
@@ -41,12 +37,12 @@ public class LeadTimeServiceImpl implements LeadTimeService {
     private final ProductRepository productRepository;
     private final SupplierRepository supplierRepository;
     private final LocationRepository locationRepository;
-    private final ConsumptionProfileRepository consumptionProfileRepository;
-    private final InventoryBufferService inventoryBufferService;
+    private final BufferCreationScheduler bufferCreationScheduler; // Add this dependency
 
     @Override
     public LeadTimeDTO createLeadTime(LeadTimeDTO leadTimeDto) {
-        log.info("Creating lead time for product: {} at location: {}", leadTimeDto.getProductId(), leadTimeDto.getLocationId());
+        log.info("Creating lead time for product: {} at location: {}",
+                leadTimeDto.getProductId(), leadTimeDto.getLocationId());
 
         // Validate product exists
         productRepository.findByProductId(leadTimeDto.getProductId())
@@ -80,8 +76,16 @@ public class LeadTimeServiceImpl implements LeadTimeService {
 
         LeadTime savedLeadTime = leadTimeRepository.save(leadTime);
 
-        // Process buffer creation/update
-        processBufferForLeadTime(savedLeadTime);
+        // Trigger buffer creation/update after lead time is created
+        try {
+            bufferCreationScheduler.processBufferForLeadTime(savedLeadTime);
+            log.info("Buffer processing completed for newly created lead time - product: {} at location: {}",
+                    leadTimeDto.getProductId(), leadTimeDto.getLocationId());
+        } catch (Exception e) {
+            log.error("Failed to process buffer for newly created lead time - product: {} at location: {}. Error: {}",
+                    leadTimeDto.getProductId(), leadTimeDto.getLocationId(), e.getMessage());
+            // Don't fail the lead time creation if buffer processing fails
+        }
 
         log.info("Lead time created successfully for product: {} at location: {}",
                 leadTimeDto.getProductId(), leadTimeDto.getLocationId());
@@ -99,8 +103,14 @@ public class LeadTimeServiceImpl implements LeadTimeService {
 
         LeadTime savedLeadTime = leadTimeRepository.save(existingLeadTime);
 
-        // Process buffer update
-        processBufferForLeadTime(savedLeadTime);
+        // Trigger buffer update after lead time is updated
+        try {
+            bufferCreationScheduler.processBufferForLeadTime(savedLeadTime);
+            log.info("Buffer processing completed for updated lead time: {}", id);
+        } catch (Exception e) {
+            log.error("Failed to process buffer for updated lead time: {}. Error: {}", id, e.getMessage());
+            // Don't fail the lead time update if buffer processing fails
+        }
 
         log.info("Lead time updated successfully: {}", id);
         return mapToDto(savedLeadTime);
@@ -149,9 +159,15 @@ public class LeadTimeServiceImpl implements LeadTimeService {
 
         LeadTime savedLeadTime = leadTimeRepository.save(leadTime);
 
-        // Process buffer update if lead time components changed
+        // Trigger buffer update if any lead time component changed
         if (leadTimeChanged) {
-            processBufferForLeadTime(savedLeadTime);
+            try {
+                bufferCreationScheduler.processBufferForLeadTime(savedLeadTime);
+                log.info("Buffer processing completed for lead time fields update: {}", id);
+            } catch (Exception e) {
+                log.error("Failed to process buffer for lead time fields update: {}. Error: {}", id, e.getMessage());
+                // Don't fail the lead time update if buffer processing fails
+            }
         }
 
         log.info("Lead time fields updated successfully: {}", id);
@@ -180,8 +196,14 @@ public class LeadTimeServiceImpl implements LeadTimeService {
 
         LeadTime savedLeadTime = leadTimeRepository.save(leadTime);
 
-        // Process buffer creation/update
-        processBufferForLeadTime(savedLeadTime);
+        // Trigger buffer creation/update when lead time is activated
+        try {
+            bufferCreationScheduler.processBufferForLeadTime(savedLeadTime);
+            log.info("Buffer processing completed for activated lead time: {}", id);
+        } catch (Exception e) {
+            log.error("Failed to process buffer for activated lead time: {}. Error: {}", id, e.getMessage());
+            // Don't fail the lead time activation if buffer processing fails
+        }
 
         log.info("Lead time activated successfully: {}", id);
         return mapToDto(savedLeadTime);
@@ -198,144 +220,23 @@ public class LeadTimeServiceImpl implements LeadTimeService {
 
         LeadTime savedLeadTime = leadTimeRepository.save(leadTime);
 
-        // Optionally deactivate the corresponding buffer
+        // Note: When deactivating, you might want to also deactivate the corresponding buffer
+        // This depends on your business logic - commenting out for now
+        /*
         try {
-            inventoryBufferService.deactivateBufferByProductAndLocation(leadTime.getProductId(), leadTime.getLocationId());
+            inventoryBufferService.deactivateBufferByProductAndLocation(
+                leadTime.getProductId(), leadTime.getLocationId());
             log.info("Buffer deactivated for deactivated lead time: {}", id);
         } catch (Exception e) {
             log.error("Failed to deactivate buffer for deactivated lead time: {}. Error: {}", id, e.getMessage());
         }
+        */
 
         log.info("Lead time deactivated successfully: {}", id);
         return mapToDto(savedLeadTime);
     }
 
-    // Buffer processing logic
-    private void processBufferForLeadTime(LeadTime leadTime) {
-        String productId = leadTime.getProductId();
-        String locationId = leadTime.getLocationId();
-
-        log.info("Processing buffer for product: {} and location: {}", productId, locationId);
-
-        // Fetch consumption profile for 7ADC
-        ConsumptionProfile consumptionProfile = consumptionProfileRepository
-                .findByProductIdAndLocationId(productId, locationId)
-                .orElse(null);
-
-        if (consumptionProfile == null) {
-            log.warn("No consumption profile found for product: {} and location: {}. Skipping buffer processing.", productId, locationId);
-            return;
-        }
-
-        Double sevenAdc = consumptionProfile.getAdc7d() != null ? consumptionProfile.getAdc7d() : 0.0;
-
-        // Calculate buffer days
-        double totalLeadTimeDays = calculateTotalLeadTimeDays(leadTime);
-        int bufferDays = (int) Math.ceil(totalLeadTimeDays);
-
-        // Calculate buffer units
-        int bufferUnits = (int) Math.ceil(sevenAdc * bufferDays);
-
-        // Check if buffer exists
-        if (inventoryBufferService.existsByProductAndLocation(productId, locationId)) {
-            log.info("Buffer exists for product: {} and location: {}. Updating...", productId, locationId);
-            updateExistingBuffer(leadTime, bufferDays, bufferUnits);
-        } else {
-            log.info("Creating new buffer for product: {} and location: {}", productId, locationId);
-            createNewBuffer(leadTime, bufferDays, bufferUnits, sevenAdc);
-        }
-    }
-
-    private void createNewBuffer(LeadTime leadTime, int bufferDays, int bufferUnits, double sevenAdc) {
-        try {
-            InventoryBufferDTO bufferDto = new InventoryBufferDTO();
-            bufferDto.setBufferId(UUID.randomUUID().toString());
-            bufferDto.setProductId(leadTime.getProductId());
-            bufferDto.setLocationId(leadTime.getLocationId());
-            bufferDto.setBufferType("SAFETY");
-            bufferDto.setBufferDays(bufferDays);
-            bufferDto.setBufferUnits(bufferUnits);
-            bufferDto.setGreenThresholdPct(33.0);
-            bufferDto.setYellowThresholdPct(33.0);
-            bufferDto.setRedThresholdPct(33.0);
-            bufferDto.setCurrentInventory(0);
-            bufferDto.setInPipelineQty(0);
-            bufferDto.setNetAvailableQty(0);
-            bufferDto.setBufferConsumedPct(0.0);
-            bufferDto.setCurrentZone("GREEN");
-            bufferDto.setReviewCycleId("CYCLE001");
-            bufferDto.setDbmReviewPeriodDays(7); // Default review period
-            bufferDto.setNextReviewDue(LocalDateTime.now().plusDays(7));
-            bufferDto.setConsecutiveZoneDays(0);
-            bufferDto.setAdjustmentThresholdDays(0);
-            bufferDto.setIsActive(true);
-            bufferDto.setCreatedAt(LocalDateTime.now());
-            bufferDto.setUpdatedAt(LocalDateTime.now());
-            bufferDto.setCreatedBy(leadTime.getCreatedBy());
-            bufferDto.setUpdatedBy(leadTime.getUpdatedBy());
-
-            inventoryBufferService.createInventoryBuffer(bufferDto);
-            log.info("Successfully created buffer for product: {} at location: {}", leadTime.getProductId(), leadTime.getLocationId());
-        } catch (Exception e) {
-            log.error("Failed to create buffer for product: {} at location: {}. Error: {}",
-                    leadTime.getProductId(), leadTime.getLocationId(), e.getMessage());
-        }
-    }
-
-    private void updateExistingBuffer(LeadTime leadTime, int bufferDays, int bufferUnits) {
-        try {
-            InventoryBufferDTO existingBuffer = inventoryBufferService.getBufferByProductAndLocation(leadTime.getProductId(), leadTime.getLocationId());
-            existingBuffer.setBufferDays(bufferDays);
-            existingBuffer.setBufferUnits(bufferUnits);
-            existingBuffer.setGreenThresholdPct(33.0);
-            existingBuffer.setYellowThresholdPct(33.0);
-            existingBuffer.setRedThresholdPct(33.0);
-            existingBuffer.setUpdatedAt(LocalDateTime.now());
-            existingBuffer.setUpdatedBy(leadTime.getUpdatedBy());
-
-            // Recalculate net available quantity and zone
-            int netAvailableQty = (existingBuffer.getCurrentInventory() != null ? existingBuffer.getCurrentInventory() : 0) +
-                    (existingBuffer.getInPipelineQty() != null ? existingBuffer.getInPipelineQty() : 0);
-            existingBuffer.setNetAvailableQty(netAvailableQty);
-
-            double bufferConsumedPct = bufferUnits > 0 ?
-                    ((double) (bufferUnits - netAvailableQty) / bufferUnits) * 100 : 0.0;
-            existingBuffer.setBufferConsumedPct(Math.max(0.0, bufferConsumedPct));
-
-            String currentZone = determineZone(netAvailableQty, bufferUnits);
-            existingBuffer.setCurrentZone(currentZone);
-
-            inventoryBufferService.updateInventoryBuffer(existingBuffer.getBufferId(), existingBuffer);
-            log.info("Successfully updated buffer for product: {} at location: {}", leadTime.getProductId(), leadTime.getLocationId());
-        } catch (Exception e) {
-            log.error("Failed to update buffer for product: {} at location: {}. Error: {}",
-                    leadTime.getProductId(), leadTime.getLocationId(), e.getMessage());
-        }
-    }
-
-    private double calculateTotalLeadTimeDays(LeadTime leadTime) {
-        double total = 0.0;
-        if (leadTime.getOrderLeadTime() != null) {
-            total += leadTime.getOrderLeadTime();
-        }
-        if (leadTime.getManufacturingTime() != null) {
-            total += leadTime.getManufacturingTime();
-        }
-        if (leadTime.getTransportTime() != null) {
-            total += leadTime.getTransportTime();
-        }
-        return total;
-    }
-
-    private String determineZone(int netAvailableQty, int bufferUnits) {
-        if (bufferUnits == 0) return "GREEN";
-        double inventoryPct = ((double) netAvailableQty / bufferUnits) * 100;
-        if (inventoryPct >= 66.0) return "GREEN";
-        else if (inventoryPct >= 33.0) return "YELLOW";
-        else return "RED";
-    }
-
-    // Rest of the existing methods (getters, enrichment, etc.) remain unchanged...
+    // Rest of the existing methods remain the same...
 
     @Override
     @Transactional(readOnly = true)
@@ -443,6 +344,7 @@ public class LeadTimeServiceImpl implements LeadTimeService {
     }
 
     private LeadTimeResponseDTO enrichLeadTimeData(LeadTime leadTime) {
+        // Single item enrichment - fetch individual records
         Product product = productRepository.findByProductId(leadTime.getProductId()).orElse(null);
         Supplier supplier = leadTime.getSupplierId() != null ?
                 supplierRepository.findById(leadTime.getSupplierId()).orElse(null) : null;
@@ -475,6 +377,7 @@ public class LeadTimeServiceImpl implements LeadTimeService {
                 .manufacturingTime(leadTime.getManufacturingTime())
                 .transportTime(leadTime.getTransportTime())
                 .totalLeadTimeDays(totalLeadTime)
+
                 .isActive(leadTime.getIsActive())
                 .updatedAt(leadTime.getUpdatedAt())
                 .updatedBy(leadTime.getUpdatedBy())
@@ -520,7 +423,7 @@ public class LeadTimeServiceImpl implements LeadTimeService {
     public LeadTimeDTO getActiveLeadTimeByProductAndLocation(String productId, String locationId) {
         LeadTime leadTime = leadTimeRepository.findByProductIdAndLocationIdAndIsActive(productId, locationId, true)
                 .orElseThrow(() -> new IllegalArgumentException(
-                        "Active lead by time not found for product: " + productId + " at location: " + locationId));
+                        "Active lead time not found for product: " + productId + " at location: " + locationId));
         return mapToDto(leadTime);
     }
 

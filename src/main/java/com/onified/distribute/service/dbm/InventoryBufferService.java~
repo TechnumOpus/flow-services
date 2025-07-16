@@ -23,7 +23,7 @@ public interface InventoryBufferService {
     Page<InventoryBufferDTO> getInventoryBuffersByProductIds(List<String> productIds, Pageable pageable);
     Page<InventoryBufferDTO> getInventoryBuffersByProductIdsAndCurrentZone(List<String> productIds, String currentZone, Pageable pageable);
     boolean existsByProductAndLocation(String productId, String locationId);
-    void deactivateBufferByProductAndLocation(String productId, String locationId);
+
     InventoryBufferDTO createInventoryBuffer(InventoryBufferDTO bufferDto);
 
     InventoryBufferDTO getBufferByProductAndLocation(String productId, String locationId);
