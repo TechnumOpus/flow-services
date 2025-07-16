@@ -20,7 +20,7 @@ public class ReplenishmentQueue {
     private String queueId;
     private String productId;
     private String locationId;
-    private Integer currentInventory;
+    private Integer inHand;
     private Integer inPipelineQty;
     private Integer allocatedQty;
     private Integer netAvailableQty;

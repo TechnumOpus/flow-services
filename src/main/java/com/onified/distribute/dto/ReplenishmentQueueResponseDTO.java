@@ -17,12 +17,12 @@ public class ReplenishmentQueueResponseDTO {
     private String locationId;
     private String locationName;
     private Integer bufferUnits;
-    private Integer inHand; // currentInventory
-    private Integer inPipeline; // inPipelineQty
-    private Integer netAvailability; // netAvailableQty
+    private Integer inHand;
+    private Integer inPipeline;
+    private Integer netAvailability;
     private Integer bufferGap;
     private Integer finalQuantity;
-    private Integer moq; // from products collection
+    private Integer moq;
     private Double daysOfSupply;
     private String bufferZone;
     private String recommendedAction;

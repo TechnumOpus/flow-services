@@ -17,6 +17,9 @@ public class Product {
     private String productId;
 
     @Indexed(unique = true)
+    private String supplierName;
+
+    @Indexed(unique = true)
     private String tenantSku;
 
     @Indexed(unique = true)

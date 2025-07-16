@@ -1,5 +1,6 @@
 package com.onified.distribute.dto;
 
+import com.onified.distribute.entity.ReplenishmentQueue;
 import lombok.Data;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -10,7 +11,7 @@ public class ReplenishmentQueueDTO {
     private String queueId;
     private String productId;
     private String locationId;
-    private Integer currentInventory;
+    private Integer inHand;
     private Integer inPipelineQty;
     private Integer allocatedQty;
     private Integer netAvailableQty;
@@ -31,4 +32,6 @@ public class ReplenishmentQueueDTO {
     private String orderId;
     private String status;
     private Boolean isActive;
+
+
 }

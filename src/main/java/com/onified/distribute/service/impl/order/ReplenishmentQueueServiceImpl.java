@@ -44,10 +44,34 @@ public class ReplenishmentQueueServiceImpl implements ReplenishmentQueueService 
     private final InventoryOrderPipelineRepository inventoryOrderPipelineRepository;
 
     @Override
+    public Optional<ReplenishmentQueue> getQueueItemByProductIdAndLocationId(String productId, String locationId) {
+        log.info("Fetching queue item by productId: {}, locationId: {}", productId, locationId);
+        return queueRepository.findByProductIdAndLocationIdAndIsActiveTrue(productId, locationId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<ReplenishmentQueue> getQueueEntityById(String queueId) {
+        log.info("Fetching replenishment queue entity: {}", queueId);
+        ReplenishmentQueue queueItem = queueRepository.findByQueueId(queueId);
+        return Optional.ofNullable(queueItem);
+    }
+
+
+    @Override
+    public Page<ReplenishmentQueueResponseDTO> getAllReplenishmentQueuesEnhanced(Pageable pageable, String queueId) {
+        log.info("Fetching all replenishment queues with enhanced format, queueId: {}", queueId);
+        Page<ReplenishmentQueue> queues = queueId == null
+                ? queueRepository.findByIsActiveTrue(pageable)
+                : queueRepository.findByQueueIdAndIsActiveTrue(queueId, pageable);
+        return queues.map(this::convertToEnhancedDto);
+    }
+
+    @Override
     public Page<ReplenishmentQueueResponseDTO> getAllReplenishmentQueuesEnhanced(Pageable pageable) {
         log.info("Fetching all replenishment queues with enhanced format");
-
         Page<ReplenishmentQueue> queues = queueRepository.findByIsActiveTrue(pageable);
+
         return queues.map(this::convertToEnhancedDto);
     }
 
@@ -81,7 +105,7 @@ public class ReplenishmentQueueServiceImpl implements ReplenishmentQueueService 
         dto.setProductId(queue.getProductId());
         dto.setLocationId(queue.getLocationId());
         dto.setBufferUnits(queue.getBufferUnits());
-        dto.setInHand(queue.getCurrentInventory());
+        dto.setInHand(queue.getInHand());
         dto.setInPipeline(queue.getInPipelineQty());
         dto.setNetAvailability(queue.getNetAvailableQty());
         dto.setBufferGap(queue.getBufferGap());
@@ -134,93 +158,6 @@ public class ReplenishmentQueueServiceImpl implements ReplenishmentQueueService 
 
         return dto;
     }
-
-
-    // Batch conversion method for better performance
-    // Batch conversion method for better performance
-//    private List<ReplenishmentQueueResponseDTO> convertToEnhancedDtoBatch(List<ReplenishmentQueue> queues) {
-//        // Get unique product IDs and location IDs
-//        List<String> productIds = queues.stream()
-//                .map(ReplenishmentQueue::getProductId)
-//                .distinct()
-//                .collect(Collectors.toList());
-//
-//        List<String> locationIds = queues.stream()
-//                .map(ReplenishmentQueue::getLocationId)
-//                .distinct()
-//                .collect(Collectors.toList());
-//
-//        // Fetch products and locations in batch
-//        List<Product> products = productRepository.findByProductIdIn(productIds);
-//        List<Location> locations = locationRepository.findByLocationIdIn(locationIds);
-//
-//        // Create maps for quick lookup
-//        Map<String, Product> productMap = products.stream()
-//                .collect(Collectors.toMap(Product::getProductId, p -> p));
-//
-//        Map<String, Location> locationMap = locations.stream()
-//                .collect(Collectors.toMap(Location::getLocationId, l -> l));
-//
-//        // Convert to DTOs
-//        return queues.stream()
-//                .map(queue -> {
-//                    ReplenishmentQueueResponseDTO dto = new ReplenishmentQueueResponseDTO();
-//
-//                    dto.setId(queue.getId());
-//                    dto.setQueueId(queue.getQueueId());
-//                    dto.setProductId(queue.getProductId());
-//                    dto.setLocationId(queue.getLocationId());
-//                    dto.setBufferUnits(queue.getBufferUnits());
-//                    dto.setInHand(queue.getCurrentInventory());
-//                    dto.setInPipeline(queue.getInPipelineQty());
-//                    dto.setNetAvailability(queue.getNetAvailableQty());
-//                    dto.setBufferGap(queue.getBufferGap());
-//                    dto.setDaysOfSupply(queue.getDaysOfSupply());
-//                    dto.setBufferZone(queue.getBufferZone());
-//                    dto.setRecommendedAction(queue.getRecommendedAction());
-//                    dto.setPriorityScore(queue.getPriorityScore());
-//                    dto.setStatus(queue.getStatus());
-//                    dto.setQueueDate(queue.getQueueDate());
-//                    dto.setReasonCodes(queue.getReasonCodes());
-//
-//                    // Set product details and calculate final quantity
-//                    Product product = productMap.get(queue.getProductId());
-//                    int moq = 0; // Default MOQ
-//
-//                    LeadTime leadTime = leadTimeRepository.findByProductId(queue.getProductId());
-//                    if (product.isPresent()) {
-//                        moq = leadTime.getMoq();
-//                        dto.setMoq(moq);
-//                        dto.setProductName(product.get().getName());
-//                    } else {
-//                        dto.setMoq(0);
-//                        dto.setProductName("Unknown Product");
-//                    }
-//
-//                    // Calculate final quantity (same logic as in convertToEnhancedDto)
-//                    int naq = queue.getNetAvailableQty() != null ? queue.getNetAvailableQty() : 0;
-//                    int bu = queue.getBufferUnits() != null ? queue.getBufferUnits() : 0;
-//                    int fq = bu - naq;
-//
-//                    if (fq < moq) {
-//                        dto.setFinalQuantity(moq);
-//                    } else {
-//                        dto.setFinalQuantity(fq);
-//                    }
-//
-//                    // Set location details
-//                    Location location = locationMap.get(queue.getLocationId());
-//                    if (location != null) {
-//                        dto.setLocationName(location.getName());
-//                    } else {
-//                        dto.setLocationName("Unknown Location");
-//                    }
-//
-//                    return dto;
-//                })
-//                .collect(Collectors.toList());
-//    }
-
 
     @Override
     public void processReplenishmentQueue() {
@@ -479,13 +416,14 @@ public class ReplenishmentQueueServiceImpl implements ReplenishmentQueueService 
         log.info("Deleted order {} from inventory_orders_pipeline", orderId);
     }
 
-    private ReplenishmentQueueDTO convertToDto(ReplenishmentQueue queueItem) {
+    @Override
+    public ReplenishmentQueueDTO convertToDto(ReplenishmentQueue queueItem) {
         ReplenishmentQueueDTO dto = new ReplenishmentQueueDTO();
         dto.setId(queueItem.getId());
         dto.setQueueId(queueItem.getQueueId());
         dto.setProductId(queueItem.getProductId());
         dto.setLocationId(queueItem.getLocationId());
-        dto.setCurrentInventory(queueItem.getCurrentInventory());
+        dto.setInHand(queueItem.getInHand()); // Changed from getCurrentInventory
         dto.setInPipelineQty(queueItem.getInPipelineQty());
         dto.setAllocatedQty(queueItem.getAllocatedQty());
         dto.setNetAvailableQty(queueItem.getNetAvailableQty());
@@ -493,7 +431,6 @@ public class ReplenishmentQueueServiceImpl implements ReplenishmentQueueService 
         dto.setBufferGap(queueItem.getBufferGap());
         dto.setBufferZone(queueItem.getBufferZone());
         dto.setDaysOfSupply(queueItem.getDaysOfSupply());
-        // Note: finalQuantity is not included as per requirements
         dto.setRecommendedQty(queueItem.getRecommendedQty());
         dto.setRecommendedAction(queueItem.getRecommendedAction());
         dto.setPriorityScore(queueItem.getPriorityScore());
@@ -510,12 +447,36 @@ public class ReplenishmentQueueServiceImpl implements ReplenishmentQueueService 
         return dto;
     }
 
+    private void updateEntityFromDto(ReplenishmentQueueDTO dto, ReplenishmentQueue queueItem) {
+        queueItem.setProductId(dto.getProductId());
+        queueItem.setLocationId(dto.getLocationId());
+        queueItem.setInHand(dto.getInHand()); // Changed from setCurrentInventory
+        queueItem.setInPipelineQty(dto.getInPipelineQty());
+        queueItem.setAllocatedQty(dto.getAllocatedQty());
+        queueItem.setNetAvailableQty(dto.getNetAvailableQty());
+        queueItem.setBufferUnits(dto.getBufferUnits());
+        queueItem.setBufferGap(dto.getBufferGap());
+        queueItem.setBufferZone(dto.getBufferZone());
+        queueItem.setDaysOfSupply(dto.getDaysOfSupply());
+        queueItem.setRecommendedQty(dto.getRecommendedQty());
+        queueItem.setRecommendedAction(dto.getRecommendedAction());
+        queueItem.setPriorityScore(dto.getPriorityScore());
+        queueItem.setAdcUsed(dto.getAdcUsed());
+        queueItem.setLeadTimeDays(dto.getLeadTimeDays());
+        queueItem.setReasonCodes(dto.getReasonCodes());
+        queueItem.setProcessedBy(dto.getProcessedBy());
+        queueItem.setActionTaken(dto.getActionTaken());
+        queueItem.setOrderId(dto.getOrderId());
+        queueItem.setStatus(dto.getStatus());
+        queueItem.setIsActive(dto.getIsActive());
+    }
+
     private ReplenishmentQueue mapToEntity(ReplenishmentQueueDTO dto) {
         ReplenishmentQueue queueItem = new ReplenishmentQueue();
         queueItem.setQueueId(dto.getQueueId());
         queueItem.setProductId(dto.getProductId());
         queueItem.setLocationId(dto.getLocationId());
-        queueItem.setCurrentInventory(dto.getCurrentInventory());
+        queueItem.setInHand(dto.getInHand()); // Changed from setCurrentInventory
         queueItem.setInPipelineQty(dto.getInPipelineQty());
         queueItem.setAllocatedQty(dto.getAllocatedQty());
         queueItem.setNetAvailableQty(dto.getNetAvailableQty());
@@ -537,30 +498,6 @@ public class ReplenishmentQueueServiceImpl implements ReplenishmentQueueService 
         queueItem.setStatus(dto.getStatus());
         queueItem.setIsActive(dto.getIsActive());
         return queueItem;
-    }
-
-    private void updateEntityFromDto(ReplenishmentQueueDTO dto, ReplenishmentQueue queueItem) {
-        queueItem.setProductId(dto.getProductId());
-        queueItem.setLocationId(dto.getLocationId());
-        queueItem.setCurrentInventory(dto.getCurrentInventory());
-        queueItem.setInPipelineQty(dto.getInPipelineQty());
-        queueItem.setAllocatedQty(dto.getAllocatedQty());
-        queueItem.setNetAvailableQty(dto.getNetAvailableQty());
-        queueItem.setBufferUnits(dto.getBufferUnits());
-        queueItem.setBufferGap(dto.getBufferGap());
-        queueItem.setBufferZone(dto.getBufferZone());
-        queueItem.setDaysOfSupply(dto.getDaysOfSupply());
-        queueItem.setRecommendedQty(dto.getRecommendedQty());
-        queueItem.setRecommendedAction(dto.getRecommendedAction());
-        queueItem.setPriorityScore(dto.getPriorityScore());
-        queueItem.setAdcUsed(dto.getAdcUsed());
-        queueItem.setLeadTimeDays(dto.getLeadTimeDays());
-        queueItem.setReasonCodes(dto.getReasonCodes());
-        queueItem.setProcessedBy(dto.getProcessedBy());
-        queueItem.setActionTaken(dto.getActionTaken());
-        queueItem.setOrderId(dto.getOrderId());
-        queueItem.setStatus(dto.getStatus());
-        queueItem.setIsActive(dto.getIsActive());
     }
 
     private Integer calculateOrderedQty(ReplenishmentQueue queueItem, InventoryBuffer buffer) {
@@ -640,7 +577,7 @@ public class ReplenishmentQueueServiceImpl implements ReplenishmentQueueService 
             queueItem.setQueueId(generateQueueId(buffer));
             queueItem.setProductId(buffer.getProductId());
             queueItem.setLocationId(buffer.getLocationId());
-            queueItem.setCurrentInventory(currentInventory);
+            queueItem.setInHand(currentInventory);
             queueItem.setInPipelineQty(inPipelineQty);
             queueItem.setNetAvailableQty(netAvailableQty);
             queueItem.setBufferUnits(bufferUnits);

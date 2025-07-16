@@ -163,10 +163,4 @@ spec:
                 name: flow-service
                 port:
                   number: 8080
-          - pathType: Prefix
-            path: /api/v1/stock-adjustments
-            backend:
-              service:
-                name: flow-service
-                port:
-                  number: 8080
+

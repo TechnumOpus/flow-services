@@ -73,7 +73,7 @@ public interface ReplenishmentQueueRepository extends MongoRepository<Replenishm
 
     Optional<ReplenishmentQueue> findByProductIdAndLocationIdAndIsActiveTrue(String productId, String locationId);
 
-    Page<ReplenishmentQueue> findByQueueIdAndIsActiveTrue(String queueId, Pageable pageable);
+    Optional<ReplenishmentQueue> findByQueueIdAndIsActiveTrue(String queueId, Pageable pageable);
 
     @Query("{'bufferZone': ?0, 'status': ?1, 'isActive': true}")
     Page<ReplenishmentQueue> findByBufferZoneAndStatusAndIsActiveTrue(String bufferZone, String status, Pageable pageable);
