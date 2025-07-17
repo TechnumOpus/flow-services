@@ -30,12 +30,17 @@ public class ProductController {
         return new ResponseEntity<>(createdProduct, HttpStatus.CREATED);
     }
 
-    @PutMapping("/{productId}")
+
+    @PutMapping("/{productId}/{tenantSku}/{supplierSku}")
     public ResponseEntity<ProductDTO> updateProduct(
             @PathVariable String productId,
-            @Valid @RequestBody ProductDTO productDto) {
-        log.info("Updating product: {}", productId);
-        ProductDTO updatedProduct = productService.updateProduct(productId, productDto);
+            @PathVariable String tenantSku,
+            @PathVariable String supplierSku,
+            @Validated @RequestBody ProductDTO productDto) {
+        log.info("Updating product with ID: {}, Tenant SKU: {}, Supplier SKU: {}",
+                productId, tenantSku, supplierSku);
+
+        ProductDTO updatedProduct = productService.updateProduct(productId, tenantSku, supplierSku, productDto);
         return ResponseEntity.ok(updatedProduct);
     }
 
@@ -128,7 +133,7 @@ public class ProductController {
         return ResponseEntity.ok(exists);
     }
 
-   
+
 
     @GetMapping("/tenant-sku/{tenantSku}/exists")
     public ResponseEntity<Boolean> existsByTenantSku(@PathVariable String tenantSku) {

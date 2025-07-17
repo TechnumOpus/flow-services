@@ -12,7 +12,7 @@ import java.util.Optional;
 @Repository
 public interface ProductRepository extends MongoRepository<Product, String> {
 
-    List<Product> findBySupplierSku(String supplierSku);
+    Optional<Product> findBySupplierSku(String supplierSku);
 
     boolean existsByProductId(String productId);
 
@@ -34,23 +34,27 @@ public interface ProductRepository extends MongoRepository<Product, String> {
 
     List<Product> findByProductIdIn(List<String> productIds);
 
-    List<Product> findByTenantSku(String tenantSku);
+    Optional<Product> findByTenantSku(String tenantSku);
 
-//    List<Product> findByIsActiveTrue();
+    List<Product> findByIsActiveTrue();
 
     @Query(value = "{'category': ?0, 'isActive': true}")
     Page<Product> findActiveByCategoryIgnoreCase(String category, Pageable pageable);
 
+    // Updated method to find by the three path parameters
     @Query(value = "{'productId': ?0, 'tenantSku': ?1, 'supplierSku': ?2}")
     Optional<Product> findByProductIdAndTenantSkuAndSupplierSku(
             String productId, String tenantSku, String supplierSku);
 
+    // Check if tenant SKU exists for a different product (for validation)
     @Query(value = "{'tenantSku': ?0, 'productId': {$ne: ?1}}", exists = true)
     boolean existsByTenantSkuAndProductIdNot(String tenantSku, String productId);
 
+    // Check if supplier SKU exists for a different product (for validation)
     @Query(value = "{'supplierSku': ?0, 'productId': {$ne: ?1}}", exists = true)
     boolean existsBySupplierSkuAndProductIdNot(String supplierSku, String productId);
 
+    // Keep old method for backward compatibility
     @Query(value = "{'productId': ?0, 'supplierName': ?1, 'tenantSku': ?2, 'supplierSku': ?3}")
     Optional<Product> findByProductIdAndSupplierNameAndTenantSkuAndSupplierSku(
             String productId, String supplierName, String tenantSku, String supplierSku);

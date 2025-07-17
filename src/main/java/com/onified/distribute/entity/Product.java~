@@ -33,8 +33,6 @@ public class Product {
     private String subcategory;
 
     private String uom;
-
-
     @Indexed
     private Boolean isActive;
 

@@ -16,13 +16,13 @@ public class Product {
     @Indexed(unique = true)
     private String productId;
 
-    @Indexed(unique = true)
+    @Indexed
     private String supplierName;
 
-    @Indexed(unique = true)
+    @Indexed
     private String tenantSku;
 
-    @Indexed(unique = true)
+    @Indexed
     private String supplierSku;
 
     private String name;
@@ -33,6 +33,7 @@ public class Product {
     private String subcategory;
 
     private String uom;
+
     @Indexed
     private Boolean isActive;
 

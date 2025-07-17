@@ -1,6 +1,7 @@
 package com.onified.distribute.controller;
 
 import com.onified.distribute.dto.ProductDTO;
+import com.onified.distribute.dto.request.ProductRequestDTO;
 import com.onified.distribute.service.masterdata.ProductService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,12 +31,17 @@ public class ProductController {
         return new ResponseEntity<>(createdProduct, HttpStatus.CREATED);
     }
 
-    @PutMapping("/{productId}")
+
+    @PutMapping("/{productId}/{tenantSku}/{supplierSku}")
     public ResponseEntity<ProductDTO> updateProduct(
             @PathVariable String productId,
-            @Valid @RequestBody ProductDTO productDto) {
-        log.info("Updating product: {}", productId);
-        ProductDTO updatedProduct = productService.updateProduct(productId, productDto);
+            @PathVariable String tenantSku,
+            @PathVariable String supplierSku,
+            @Validated @RequestBody ProductRequestDTO productRequestDto) {
+        log.info("Updating product with ID: {}, Tenant SKU: {}, Supplier SKU: {}",
+                productId, tenantSku, supplierSku);
+
+        ProductDTO updatedProduct = productService.updateProduct(productId, tenantSku, supplierSku, productRequestDto);
         return ResponseEntity.ok(updatedProduct);
     }
 

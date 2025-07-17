@@ -1,9 +1,11 @@
 package com.onified.distribute.service.impl.masterdata;
 
 import com.onified.distribute.dto.ProductDTO;
+import com.onified.distribute.dto.request.ProductRequestDTO;
 import com.onified.distribute.entity.Product;
 import com.onified.distribute.repository.ProductRepository;
 import com.onified.distribute.service.masterdata.ProductService;
+import com.onified.distribute.exception.ProductExceptionHandler.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -14,7 +16,6 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
-import com.onified.distribute.exception.ProductExceptionHandler.*;
 
 @Slf4j
 @Service
@@ -37,9 +38,8 @@ public class ProductServiceImpl implements ProductService {
     @Override
     public ProductDTO createProduct(ProductDTO productDto) {
         log.info("Creating product with Tenant SKU: {}, Supplier SKU: {}",
-                 productDto.getTenantSku(), productDto.getSupplierSku());
+                productDto.getTenantSku(), productDto.getSupplierSku());
 
-        // Check for existing SKU codes
         validateUniqueSkuCodes(productDto, null);
 
         Product product = mapToEntity(productDto);
@@ -57,17 +57,64 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    public ProductDTO updateProduct(String productId, String tenantSku, String supplierSku, ProductRequestDTO productRequestDto) {
+        log.info("Updating product with ID: {}, Tenant SKU: {}, Supplier SKU: {}",
+                productId, tenantSku, supplierSku);
+
+        // Find existing product using path parameters
+        Product existingProduct = productRepository.findByProductIdAndTenantSkuAndSupplierSku(
+                        productId, tenantSku, supplierSku)
+                .orElseThrow(() -> new ProductNotFoundException(
+                        String.format("Product not found with ID: %s, Tenant SKU: %s, Supplier SKU: %s",
+                                productId, tenantSku, supplierSku)));
+
+        // Update only the fields that are provided in the request
+        updateAllowedFields(existingProduct, productRequestDto);
+        existingProduct.setUpdatedAt(LocalDateTime.now());
+
+        Product savedProduct = productRepository.save(existingProduct);
+        log.info("Product updated successfully with ID: {}", productId);
+
+        return mapToDto(savedProduct);
+    }
+
+    // Keep the old updateProduct method for backward compatibility
+    @Override
     public ProductDTO updateProduct(String productId, ProductDTO productDto) {
         log.info("Updating product: {}", productId);
 
-        Product existingProduct = productRepository.findByProductId(productId)
-                .orElseThrow(() -> new ProductNotFoundException("Product not found: " + productId));
+        // Validate input
+        if (productDto.getSupplierName() == null || productDto.getSupplierName().isBlank()) {
+            throw new IllegalArgumentException("Supplier name is required");
+        }
+        if (productDto.getTenantSku() == null || productDto.getTenantSku().isBlank()) {
+            throw new IllegalArgumentException("Tenant SKU is required");
+        }
+        if (productDto.getSupplierSku() == null || productDto.getSupplierSku().isBlank()) {
+            throw new IllegalArgumentException("Supplier SKU is required");
+        }
 
-        // Validate unique SKU codes for update (excluding current product)
+        // Find product by combination of fields
+        Product existingProduct = productRepository.findByProductIdAndSupplierNameAndTenantSkuAndSupplierSku(
+                        productId, productDto.getSupplierName(), productDto.getTenantSku(), productDto.getSupplierSku())
+                .orElseThrow(() -> new ProductNotFoundException(
+                        "Product not found with ID: " + productId +
+                                ", Supplier: " + productDto.getSupplierName() +
+                                ", Tenant SKU: " + productDto.getTenantSku() +
+                                ", Supplier SKU: " + productDto.getSupplierSku()));
+
+        // Validate unique productId for update
         validateUniqueSkuCodes(productDto, existingProduct);
 
-        updateEntityFromDto(existingProduct, productDto);
+        // Update only specified fields
+        existingProduct.setTenantSku(productDto.getTenantSku());
+        existingProduct.setSupplierSku(productDto.getSupplierSku());
+        existingProduct.setSupplierName(productDto.getSupplierName());
+        existingProduct.setCategory(productDto.getCategory());
+        existingProduct.setSubcategory(productDto.getSubcategory());
+        existingProduct.setUom(productDto.getUom());
         existingProduct.setUpdatedAt(LocalDateTime.now());
+        existingProduct.setUpdatedBy(productDto.getUpdatedBy());
 
         Product savedProduct = productRepository.save(existingProduct);
         log.info("Product updated successfully: {}", productId);
@@ -83,21 +130,30 @@ public class ProductServiceImpl implements ProductService {
         return mapToDto(product);
     }
 
-
     @Override
     @Transactional(readOnly = true)
     public ProductDTO getProductByTenantSku(String tenantSku) {
-        Product product = productRepository.findByTenantSku(tenantSku)
-                .orElseThrow(() -> new ProductNotFoundException("Product not found with Tenant SKU: " + tenantSku));
-        return mapToDto(product);
+        List<Product> products = productRepository.findByTenantSku(tenantSku);
+        if (products.isEmpty()) {
+            throw new ProductNotFoundException("Product not found with Tenant SKU: " + tenantSku);
+        }
+        if (products.size() > 1) {
+            throw new IllegalStateException("Multiple products found with Tenant SKU: " + tenantSku);
+        }
+        return mapToDto(products.get(0));
     }
 
     @Override
     @Transactional(readOnly = true)
     public ProductDTO getProductBySupplierSku(String supplierSku) {
-        Product product = productRepository.findBySupplierSku(supplierSku)
-                .orElseThrow(() -> new ProductNotFoundException("Product not found with Supplier SKU: " + supplierSku));
-        return mapToDto(product);
+        List<Product> products = productRepository.findBySupplierSku(supplierSku);
+        if (products.isEmpty()) {
+            throw new ProductNotFoundException("Product not found with Supplier SKU: " + supplierSku);
+        }
+        if (products.size() > 1) {
+            throw new IllegalStateException("Multiple products found with Supplier SKU: " + supplierSku);
+        }
+        return mapToDto(products.get(0));
     }
 
     @Override
@@ -182,43 +238,50 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional(readOnly = true)
     public boolean existsByTenantSku(String tenantSku) {
-        return productRepository.existsByTenantSku(tenantSku);
+        return !productRepository.findByTenantSku(tenantSku).isEmpty();
     }
 
     @Override
     @Transactional(readOnly = true)
     public boolean existsBySupplierSku(String supplierSku) {
-        return productRepository.existsBySupplierSku(supplierSku);
+        return !productRepository.findBySupplierSku(supplierSku).isEmpty();
+    }
+
+    private void updateAllowedFields(Product existingProduct, ProductRequestDTO productRequestDto) {
+        // Update only the fields that are provided in the request (not null and not blank)
+        if (productRequestDto.getTenantSku() != null && !productRequestDto.getTenantSku().isBlank()) {
+            existingProduct.setTenantSku(productRequestDto.getTenantSku());
+        }
+
+        if (productRequestDto.getSupplierSku() != null && !productRequestDto.getSupplierSku().isBlank()) {
+            existingProduct.setSupplierSku(productRequestDto.getSupplierSku());
+        }
+
+        if (productRequestDto.getSupplierName() != null && !productRequestDto.getSupplierName().isBlank()) {
+            existingProduct.setSupplierName(productRequestDto.getSupplierName());
+        }
+
+        if (productRequestDto.getCategory() != null && !productRequestDto.getCategory().isBlank()) {
+            existingProduct.setCategory(productRequestDto.getCategory());
+        }
+
+        if (productRequestDto.getSubCategory() != null && !productRequestDto.getSubCategory().isBlank()) {
+            existingProduct.setSubcategory(productRequestDto.getSubCategory());
+        }
+
+        if (productRequestDto.getUom() != null && !productRequestDto.getUom().isBlank()) {
+            existingProduct.setUom(productRequestDto.getUom());
+        }
+        
     }
 
     private void validateUniqueSkuCodes(ProductDTO productDto, Product existingProduct) {
-        // Check SKU Code uniqueness
-        if (existingProduct == null || !existingProduct.getProductId().equals(productDto.getProductId())) {
-            if (productRepository.existsByProductId(productDto.getProductId())) {
-                throw new ProductAlreadyExistsException("SKU Code already exists: " + productDto.getProductId());
-            }
-        }
+        String productId = productDto.getProductId() != null ? productDto.getProductId() : "";
 
-        // Check Tenant SKU uniqueness
-        if (existingProduct == null || !existingProduct.getTenantSku().equals(productDto.getTenantSku())) {
-            if (productRepository.existsByTenantSku(productDto.getTenantSku())) {
-                throw new ProductAlreadyExistsException("Tenant SKU already exists: " + productDto.getTenantSku());
-            }
-        }
-
-        // Check Supplier SKU uniqueness
-        if (existingProduct == null || !existingProduct.getSupplierSku().equals(productDto.getSupplierSku())) {
-            if (productRepository.existsBySupplierSku(productDto.getSupplierSku())) {
-                throw new ProductAlreadyExistsException("Supplier SKU already exists: " + productDto.getSupplierSku());
-            }
-        }
-
-        // Check Product ID uniqueness (if provided)
-        if (productDto.getProductId() != null) {
-            if (existingProduct == null || !existingProduct.getProductId().equals(productDto.getProductId())) {
-                if (productRepository.existsByProductId(productDto.getProductId())) {
-                    throw new ProductAlreadyExistsException("Product ID already exists: " + productDto.getProductId());
-                }
+        // Check Product ID uniqueness
+        if (!productId.isBlank() && (existingProduct == null || !existingProduct.getProductId().equals(productId))) {
+            if (productRepository.existsByProductId(productId)) {
+                throw new ProductAlreadyExistsException("Product ID already exists: " + productId);
             }
         }
     }
@@ -228,11 +291,11 @@ public class ProductServiceImpl implements ProductService {
         product.setProductId(dto.getProductId());
         product.setTenantSku(dto.getTenantSku());
         product.setSupplierSku(dto.getSupplierSku());
+        product.setSupplierName(dto.getSupplierName());
         product.setName(dto.getName());
         product.setCategory(dto.getCategory());
         product.setSubcategory(dto.getSubcategory());
         product.setUom(dto.getUom());
-
         product.setIsActive(dto.getIsActive() != null ? dto.getIsActive() : true);
         product.setCreatedBy(dto.getCreatedBy());
         product.setUpdatedBy(dto.getUpdatedBy());
@@ -245,32 +308,16 @@ public class ProductServiceImpl implements ProductService {
         dto.setProductId(entity.getProductId());
         dto.setTenantSku(entity.getTenantSku());
         dto.setSupplierSku(entity.getSupplierSku());
+        dto.setSupplierName(entity.getSupplierName());
         dto.setName(entity.getName());
         dto.setCategory(entity.getCategory());
         dto.setSubcategory(entity.getSubcategory());
         dto.setUom(entity.getUom());
-
         dto.setIsActive(entity.getIsActive());
         dto.setCreatedAt(entity.getCreatedAt());
         dto.setUpdatedAt(entity.getUpdatedAt());
         dto.setCreatedBy(entity.getCreatedBy());
         dto.setUpdatedBy(entity.getUpdatedBy());
         return dto;
-    }
-
-    private void updateEntityFromDto(Product entity, ProductDTO dto) {
-        entity.setProductId(dto.getProductId());
-        entity.setTenantSku(dto.getTenantSku());
-        entity.setSupplierSku(dto.getSupplierSku());
-        entity.setSupplierName(dto.getSupplierName());
-        entity.setName(dto.getName());
-        entity.setCategory(dto.getCategory());
-        entity.setSubcategory(dto.getSubcategory());
-        entity.setUom(dto.getUom());
-
-        if (dto.getIsActive() != null) {
-            entity.setIsActive(dto.getIsActive());
-        }
-        entity.setUpdatedBy(dto.getUpdatedBy());
     }
 }
