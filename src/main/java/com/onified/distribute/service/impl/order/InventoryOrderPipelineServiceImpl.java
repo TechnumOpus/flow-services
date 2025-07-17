@@ -146,8 +146,15 @@ public class InventoryOrderPipelineServiceImpl implements InventoryOrderPipeline
     }
     @Override
     public InventoryOrderPipelineDTO createOrder(InventoryOrderPipelineDTO orderDTO) {
-        log.info("Creating inventory order pipeline with ID: {}", orderDTO.getOrderId());
+        log.info("Creating inventory order pipeline");
 
+        // Generate orderId if not provided
+        if (orderDTO.getOrderId() == null || orderDTO.getOrderId().isEmpty()) {
+            String randomCode = UUID.randomUUID().toString().substring(0, 4).toUpperCase();
+            orderDTO.setOrderId("ORD-" + randomCode);
+        }
+
+        // Check if orderId already exists
         if (orderRepository.findByOrderId(orderDTO.getOrderId()) != null) {
             throw new BadRequestException("Order ID already exists: " + orderDTO.getOrderId());
         }
@@ -155,7 +162,7 @@ public class InventoryOrderPipelineServiceImpl implements InventoryOrderPipeline
         InventoryOrderPipeline order = mapToEntity(orderDTO);
         order.setCreatedAt(LocalDateTime.now());
         order.setUpdatedAt(LocalDateTime.now());
-      InventoryOrderPipeline savedOrder = orderRepository.save(order);
+        InventoryOrderPipeline savedOrder = orderRepository.save(order);
         return convertToDto(savedOrder);
     }
 
@@ -217,11 +224,7 @@ public class InventoryOrderPipelineServiceImpl implements InventoryOrderPipeline
                 orderDTO.setOrderType(queue.getRecommendedAction().equalsIgnoreCase("EXPEDITE") ? "EXPEDITE" : "STANDARD");
                 orderDTO.setOrderedQty(queueItem.getFinalQuantity() != null ? queueItem.getFinalQuantity() : queue.getRecommendedQty());
 
-                orderDTO.setOrderDate(LocalDateTime.now());
-                orderDTO.setExpectedReceiptDate(
-                        queue.getLeadTimeDays() != null
-                                ? LocalDateTime.now().plusDays(queue.getLeadTimeDays().longValue())
-                                : LocalDateTime.now().plusDays(7));
+
                 orderDTO.setStatus("DRAFT");
                 orderDTO.setCreatedAt(LocalDateTime.now());
                 orderDTO.setUpdatedAt(LocalDateTime.now());
@@ -324,17 +327,13 @@ public class InventoryOrderPipelineServiceImpl implements InventoryOrderPipeline
 
     private InventoryOrderPipelineDTO convertToDto(InventoryOrderPipeline order) {
         InventoryOrderPipelineDTO dto = new InventoryOrderPipelineDTO();
-        dto.setId(order.getId());
         dto.setOrderId(order.getOrderId());
         dto.setProductId(order.getProductId());
         dto.setLocationId(order.getLocationId());
         dto.setOrderType(order.getOrderType());
         dto.setOrderedQty(order.getOrderedQty());
 
-        dto.setOrderDate(order.getOrderDate());
-        dto.setExpectedReceiptDate(order.getExpectedReceiptDate());
-        dto.setActualReceiptDate(order.getActualReceiptDate());
-        dto.setExternalOrderRef(order.getExternalOrderRef());
+
         dto.setSupplierName(order.getSupplierName());
         dto.setStatus(order.getStatus());
         dto.setCreatedAt(order.getCreatedAt());
@@ -352,10 +351,6 @@ public class InventoryOrderPipelineServiceImpl implements InventoryOrderPipeline
         order.setOrderType(dto.getOrderType());
         order.setOrderedQty(dto.getOrderedQty());
 
-        order.setOrderDate(dto.getOrderDate());
-        order.setExpectedReceiptDate(dto.getExpectedReceiptDate());
-        order.setActualReceiptDate(dto.getActualReceiptDate());
-        order.setExternalOrderRef(dto.getExternalOrderRef());
         order.setSupplierName(dto.getSupplierName());
         order.setStatus(dto.getStatus());
         order.setCreatedBy(dto.getCreatedBy());
@@ -368,10 +363,7 @@ public class InventoryOrderPipelineServiceImpl implements InventoryOrderPipeline
         order.setOrderType(dto.getOrderType());
         order.setOrderedQty(dto.getOrderedQty());
         order.setSupplierName(dto.getSupplierName());
-        order.setOrderDate(dto.getOrderDate());
-        order.setExpectedReceiptDate(dto.getExpectedReceiptDate());
-        order.setActualReceiptDate(dto.getActualReceiptDate());
-        order.setExternalOrderRef(dto.getExternalOrderRef());
+
         order.setStatus(dto.getStatus());
     }
 }

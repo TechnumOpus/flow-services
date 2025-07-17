@@ -94,7 +94,11 @@ public class LeadTimeServiceImpl implements LeadTimeService {
         LeadTime existingLeadTime = leadTimeRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Lead time not found: " + id));
 
-        updateEntityFromDto(existingLeadTime, leadTimeDto);
+        // Update only lead time fields and moq
+        existingLeadTime.setOrderLeadTime(leadTimeDto.getOrderLeadTime());
+        existingLeadTime.setManufacturingTime(leadTimeDto.getManufacturingTime());
+        existingLeadTime.setTransportTime(leadTimeDto.getTransportTime());
+        existingLeadTime.setMoq(leadTimeDto.getMoq());
         existingLeadTime.setUpdatedAt(LocalDateTime.now());
 
         LeadTime savedLeadTime = leadTimeRepository.save(existingLeadTime);
@@ -102,7 +106,6 @@ public class LeadTimeServiceImpl implements LeadTimeService {
         // Process buffer update
         processBufferForLeadTime(savedLeadTime);
 
-        log.info("Lead time updated successfully: {}", id);
         return mapToDto(savedLeadTime);
     }
 

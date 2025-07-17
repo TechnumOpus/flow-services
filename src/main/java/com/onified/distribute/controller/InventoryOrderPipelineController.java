@@ -77,10 +77,12 @@ public class InventoryOrderPipelineController {
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
-    @PostMapping
+    @PostMapping("/orders")
     public ResponseEntity<InventoryOrderPipelineDTO> createOrder(@Valid @RequestBody InventoryOrderPipelineDTO orderDTO) {
-        log.info("Creating order with ID: {}", orderDTO.getOrderId());
+        log.info("Received request to create order with productId: {}, locationId: {}",
+                orderDTO.getProductId(), orderDTO.getLocationId());
         InventoryOrderPipelineDTO createdOrder = orderService.createOrder(orderDTO);
+        log.info("Successfully created order with ID: {}", createdOrder.getOrderId());
         return new ResponseEntity<>(createdOrder, HttpStatus.CREATED);
     }
 

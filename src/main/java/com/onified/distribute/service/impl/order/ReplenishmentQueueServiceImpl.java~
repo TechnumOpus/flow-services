@@ -368,7 +368,7 @@ public class ReplenishmentQueueServiceImpl implements ReplenishmentQueueService 
                     dto.setLocationId(order.getLocationId());
                     dto.setOrderType(order.getOrderType());
                     dto.setOrderedQty(order.getOrderedQty());
-                   
+
                     dto.setOrderDate(order.getOrderDate());
                     dto.setExpectedReceiptDate(order.getExpectedReceiptDate());
                     dto.setActualReceiptDate(order.getActualReceiptDate());

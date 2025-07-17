@@ -199,11 +199,7 @@ public class ReplenishmentQueueServiceImpl implements ReplenishmentQueueService 
                 orderDTO.setOrderType(queueItem.getRecommendedAction().equalsIgnoreCase("expedite") ? "EXPEDITE" : "STANDARD");
                 orderDTO.setOrderedQty(calculateOrderedQty(queueItem, buffer));
 
-                orderDTO.setOrderDate(LocalDateTime.now());
-                orderDTO.setExpectedReceiptDate(
-                        queueItem.getLeadTimeDays() != null
-                                ? LocalDateTime.now().plusDays(queueItem.getLeadTimeDays().longValue())
-                                : LocalDateTime.now().plusDays(7));
+
                 orderDTO.setStatus("DRAFT");
                 orderDTO.setCreatedAt(LocalDateTime.now());
                 orderDTO.setUpdatedAt(LocalDateTime.now());
@@ -362,16 +358,12 @@ public class ReplenishmentQueueServiceImpl implements ReplenishmentQueueService 
         return inventoryOrderPipelineRepository.findByStatusInAndLocationId(inTransitStatuses, locationId, pageable)
                 .map(order -> {
                     InventoryOrderPipelineDTO dto = new InventoryOrderPipelineDTO();
-                    dto.setId(order.getId());
                     dto.setOrderId(order.getOrderId());
                     dto.setProductId(order.getProductId());
                     dto.setLocationId(order.getLocationId());
                     dto.setOrderType(order.getOrderType());
                     dto.setOrderedQty(order.getOrderedQty());
 
-                    dto.setOrderDate(order.getOrderDate());
-                    dto.setExpectedReceiptDate(order.getExpectedReceiptDate());
-                    dto.setActualReceiptDate(order.getActualReceiptDate());
                     dto.setStatus(order.getStatus());
                     return dto;
                 });
