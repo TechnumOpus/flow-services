@@ -41,6 +41,7 @@ public class InventoryOrderPipelineController {
         Page<InventoryOrderPipelineDTO> orders = orderService.getPendingOrders(locationId, pageable);
         return ResponseEntity.ok(orders);
     }
+
     @PostMapping("/approve-all")
     public ResponseEntity<Map<String, Object>> approveSelectedOrders(@RequestBody List<String> orderIds) {
         log.info("Approving selected orders: {}", orderIds);

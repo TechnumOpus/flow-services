@@ -135,7 +135,7 @@ public class InventoryOrderPipelineServiceImpl implements InventoryOrderPipeline
             if (locationId != null && !locationId.isEmpty()) {
                 orders = orderRepository.findByStatusAndLocationId(status, locationId, pageable);
             } else {
-                orders = orderRepository.findByStatusNot(status, pageable);
+                orders = orderRepository.findByStatus(status, pageable);
             }
         } else {
             // If no specific status, get all except DRAFT

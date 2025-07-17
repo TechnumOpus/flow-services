@@ -37,7 +37,13 @@ public interface InventoryOrderPipelineRepository extends MongoRepository<Invent
     @Query("{'status': ?0, 'location_id': ?1}")
     Page<InventoryOrderPipeline> findByStatusAndLocationId(String status, String locationId, Pageable pageable);
 
-    @Query("{'location_id': ?0}")
-    Page<InventoryOrderPipeline> findAllByLocationIdDebug(String locationId, Pageable pageable);
-}
+    // MongoDB query to exclude DRAFT status with optional locationId filter
+    @Query("{ 'status': { $ne: ?0 }, $and: [ { $or: [ { ?1: null }, { 'location_id': ?1 } ] } ] }")
+    Page<InventoryOrderPipeline> findByStatusNotAndLocationId(String excludedStatus, String locationId, Pageable pageable);
+
+    // For when locationId is null - get all records except specified status
+    Page<InventoryOrderPipeline> findByStatusNot(String status, Pageable pageable);
+
+
+    }
 
