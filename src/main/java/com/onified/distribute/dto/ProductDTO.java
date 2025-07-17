@@ -12,23 +12,18 @@ public class ProductDTO {
 
     private String productId;
 
-    @NotBlank(message = "supplier name is required")
     private String supplierName;
 
-    @NotBlank(message = "Tenant SKU is required")
     private String tenantSku;
 
-    @NotBlank(message = "Supplier SKU is required")
     private String supplierSku;
 
-    @NotBlank(message = "Product name is required")
     private String name;
 
     private String category;
 
     private String subcategory;
 
-    @NotBlank(message = "UOM is required")
     private String uom;
 
 
