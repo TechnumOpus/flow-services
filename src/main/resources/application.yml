@@ -13,6 +13,23 @@ spring:
   cloud:
     compatibility-verifier:
       enabled: false
+  mvc:
+    # Disable static resource handling for API paths
+    static-path-pattern: /static/**
+    # Ensure proper path matching
+    pathmatch:
+      matching-strategy: ant_path_matcher
+    web:
+      resources:
+        # Only serve static resources from specific paths
+        static-locations: classpath:/static/
+        add-mappings: false  # Disable default static resource mappings
+
+  server:
+    # Ensure proper forwarded headers handling
+    forward-headers-strategy: framework
+    # Handle X-Forwarded-* headers from ingress
+    use-forward-headers: true
 
 server:
   port: 8080

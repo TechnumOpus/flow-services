@@ -19,7 +19,7 @@ server:
 
 identity:
   service:
-    url: http://localhost:8081
+    url: http://localhost:8282
 
 logging:
   level:
