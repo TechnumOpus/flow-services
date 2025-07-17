@@ -36,7 +36,7 @@ public class BufferAdjustmentLogController {
         return new ResponseEntity<>(createdLog, HttpStatus.CREATED);
     }
 
-
+    
 
     @PutMapping("/{logId}")
     public ResponseEntity<BufferAdjustmentLogDTO> updateBufferAdjustmentLog(

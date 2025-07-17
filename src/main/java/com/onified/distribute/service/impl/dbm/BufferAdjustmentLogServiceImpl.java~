@@ -28,26 +28,42 @@ public class BufferAdjustmentLogServiceImpl implements BufferAdjustmentLogServic
     @Override
     @Transactional(readOnly = true)
     public Page<BufferAdjustmentLog> getManualOverrideLogs(String productId, String locationId, Pageable pageable) {
-        log.info("Fetching manual override logs - productId: {}, locationId: {}", productId, locationId);
+        log.info("Fetching manual override logs from database - productId: {}, locationId: {}", productId, locationId);
 
         try {
-            Page<BufferAdjustmentLog> logs;
+            // Create query criteria for manual overrides
+            Criteria criteria = new Criteria();
 
-            if (productId != null && locationId != null) {
-                logs = bufferAdjustmentLogRepository.findManualOverrideLogsByProductIdAndLocationId(productId, locationId, pageable);
-            } else if (productId != null) {
-                logs = bufferAdjustmentLogRepository.findManualOverrideLogsByProductId(productId, pageable);
-            } else if (locationId != null) {
-                logs = bufferAdjustmentLogRepository.findManualOverrideLogsByLocationId(locationId, pageable);
-            } else {
-                logs = bufferAdjustmentLogRepository.findManualOverrideLogs(pageable);
+            // Only get logs that represent manual overrides
+            criteria.and("systemRecommended").is(false)
+                    .and("overriddenAction").ne(null)
+                    .and("adjustmentType").in("MANUAL_OVERRIDE", "THRESHOLD_UPDATE", "MANUAL_BUFFER_ADJUSTMENT");
+
+            // Apply filters if provided
+            if (productId != null && !productId.isEmpty()) {
+                criteria.and("productId").is(productId);
             }
 
-            log.info("Successfully fetched {} manual override logs", logs.getTotalElements());
-            return logs;
+            if (locationId != null && !locationId.isEmpty()) {
+                criteria.and("locationId").is(locationId);
+            }
+
+            // Create query with criteria
+            Query query = new Query(criteria);
+
+            // Apply pagination and sorting
+            query.with(pageable);
+
+            // Execute query
+            List<BufferAdjustmentLog> logs = mongoTemplate.find(query, BufferAdjustmentLog.class);
+
+            // Get total count for pagination
+            long totalElements = mongoTemplate.count(Query.of(query).limit(-1).skip(-1), BufferAdjustmentLog.class);
+
+            return new PageImpl<>(logs, pageable, totalElements);
 
         } catch (Exception e) {
-            log.error("Error fetching manual override logs", e);
+            log.error("Error fetching manual override logs from database", e);
             throw new RuntimeException("Failed to fetch manual override logs", e);
         }
     }
@@ -232,6 +248,7 @@ public class BufferAdjustmentLogServiceImpl implements BufferAdjustmentLogServic
         dto.setApprovalDate(adjustmentLog.getApprovalDate());
         dto.setAdjustmentDate(adjustmentLog.getAdjustmentDate());
         dto.setCreatedBy(adjustmentLog.getCreatedBy());
+        dto.setComments(adjustmentLog.getComments());
         return dto;
     }
 
@@ -256,6 +273,7 @@ public class BufferAdjustmentLogServiceImpl implements BufferAdjustmentLogServic
         adjustmentLog.setApprovalDate(dto.getApprovalDate());
         adjustmentLog.setAdjustmentDate(dto.getAdjustmentDate());
         adjustmentLog.setCreatedBy(dto.getCreatedBy());
+        adjustmentLog.setComments(dto.getComments());
         return adjustmentLog;
     }
 
@@ -277,5 +295,6 @@ public class BufferAdjustmentLogServiceImpl implements BufferAdjustmentLogServic
         adjustmentLog.setApprovedBy(dto.getApprovedBy());
         adjustmentLog.setApprovalDate(dto.getApprovalDate());
         adjustmentLog.setCreatedBy(dto.getCreatedBy());
+        adjustmentLog.setComments(dto.getComments());
     }
 }

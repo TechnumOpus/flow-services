@@ -1,6 +1,7 @@
 package com.onified.distribute.service.impl.dbm;
 
 import com.onified.distribute.dto.*;
+import com.onified.distribute.dto.response.BufferOverriddenResponse;
 import com.onified.distribute.entity.*;
 import com.onified.distribute.repository.*;
 import com.onified.distribute.service.dbm.BufferThresholdCycleService;
@@ -30,6 +31,46 @@ public class BufferThresholdCycleServiceImpl implements BufferThresholdCycleServ
     private final ProductRepository productRepository;
     private final LocationRepository locationRepository;
     private final BufferAdjustmentLogService bufferAdjustmentLogService;
+
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<BufferOverriddenResponse> getAllManualBufferAdjustmentLogs(String productId, String locationId, Pageable pageable) {
+        log.info("Fetching manual buffer adjustment logs with filters - productId: {}, locationId: {}", productId, locationId);
+
+        try {
+            // Get all manual override logs from BufferAdjustmentLogService
+            Page<BufferAdjustmentLog> logs = bufferAdjustmentLogService
+                    .getManualOverrideLogs(productId, locationId, pageable);
+
+            List<BufferOverriddenResponse> responseList = logs.getContent().stream()
+                    .map(this::convertToBufferOverriddenResponse)
+                    .collect(Collectors.toList());
+
+            return new PageImpl<>(responseList, pageable, logs.getTotalElements());
+
+        } catch (Exception e) {
+            log.error("Error fetching manual buffer adjustment logs", e);
+            throw new RuntimeException("Failed to fetch manual buffer adjustment logs", e);
+        }
+    }
+
+    private BufferOverriddenResponse convertToBufferOverriddenResponse(BufferAdjustmentLog log) {
+        BufferOverriddenResponse response = new BufferOverriddenResponse();
+
+        response.setProductId(log.getProductId());
+        response.setLocationId(log.getLocationId());
+        response.setOverriddenAction(log.getOverriddenAction());
+        response.setOldBufferUnits(log.getOldBufferUnits());
+        response.setNewBufferUnits(log.getFinalBufferUnits());
+        response.setChangePercentage(log.getChangePercentage());
+        response.setAdjustmentType(log.getAdjustmentType());
+        response.setTriggerReason(log.getTriggerReason());
+        response.setApprovedBy(log.getApprovedBy());
+        response.setApprovalDate(log.getApprovalDate());
+
+        return response;
+    }
 
     @Override
     @Transactional(readOnly = true)
@@ -105,8 +146,11 @@ public class BufferThresholdCycleServiceImpl implements BufferThresholdCycleServ
     public void triggerBufferReview(String bufferId) {
         log.info("Triggering manual review for buffer: {}", bufferId);
 
-        InventoryBuffer buffer = inventoryBufferRepository.findById(bufferId)
-                .orElseThrow(() -> new IllegalArgumentException("Buffer not found with ID: " + bufferId));
+        InventoryBuffer buffer = inventoryBufferRepository.findByBufferId(bufferId);
+        if (buffer == null) {
+            throw new IllegalArgumentException("Buffer not found with ID: " + bufferId);
+        }
+
 
         try {
             // Update the buffer's last review date and next review due date

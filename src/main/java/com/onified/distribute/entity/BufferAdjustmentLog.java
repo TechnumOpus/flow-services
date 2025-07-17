@@ -19,21 +19,28 @@ public class BufferAdjustmentLog {
     private String bufferId;
     private String productId;
     private String locationId;
-    private String adjustmentType;
+
     private Integer proposedBufferUnits;
     private Integer safetyBufferUnits;
     private Integer finalBufferUnits;
-    private Double changePercentage;
-    private String triggerReason;
     private Integer consecutiveDaysInZone;
-    private Double baseADC; // base adc
+    private Double baseADC;
     private Boolean systemRecommended;
     private Boolean requiresApproval;
     private String approvalStatus;
     private String approvedBy;
-    private LocalDateTime approvalDate;
+
     @Indexed
     private LocalDateTime adjustmentDate;
     private String createdBy;
-    private String comments;
+
+
+    private String adjustmentType;
+    private String triggerReason;
+    private String overriddenAction;
+    private Integer oldBufferUnits;
+    private Integer newBufferUnits;
+    private Double changePercentage;
+    private LocalDateTime approvalDate;
+
 }

@@ -1,15 +1,13 @@
 package com.onified.distribute.service.dbm;
 
 import com.onified.distribute.dto.BufferAdjustmentLogDTO;
-import com.onified.distribute.entity.BufferAdjustmentLog;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDateTime;
 
 public interface BufferAdjustmentLogService {
-
-    Page<BufferAdjustmentLog> getManualOverrideLogs(String productId, String locationId, Pageable pageable);
+    
     BufferAdjustmentLogDTO createBufferAdjustmentLog(BufferAdjustmentLogDTO logDto);
     
     BufferAdjustmentLogDTO updateBufferAdjustmentLog(String logId, BufferAdjustmentLogDTO logDto);

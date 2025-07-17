@@ -3,12 +3,17 @@ package com.onified.distribute.service.dbm;
 import com.onified.distribute.dto.BufferThresholdCycleDTO;
 import com.onified.distribute.dto.BufferThresholdUpdateDTO;
 import com.onified.distribute.dto.ReviewCycleDTO;
+import com.onified.distribute.dto.response.BufferOverriddenResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 
 public interface BufferThresholdCycleService {
+
+
+
+    Page<BufferOverriddenResponse> getAllManualBufferAdjustmentLogs(String productId, String locationId, Pageable pageable);
 
     /**
      * Get all inventory buffers with threshold and cycle information

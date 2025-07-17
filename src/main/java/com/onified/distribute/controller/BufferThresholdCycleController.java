@@ -3,6 +3,7 @@ package com.onified.distribute.controller;
 import com.onified.distribute.dto.BufferThresholdCycleDTO;
 import com.onified.distribute.dto.BufferThresholdUpdateDTO;
 import com.onified.distribute.dto.ReviewCycleDTO;
+import com.onified.distribute.dto.response.BufferOverriddenResponse;
 import com.onified.distribute.service.dbm.BufferThresholdCycleService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,6 +30,37 @@ import java.util.Map;
 public class BufferThresholdCycleController {
 
     private final BufferThresholdCycleService bufferThresholdCycleService;
+
+
+    @GetMapping("/manual-overrides")
+    public ResponseEntity<Page<BufferOverriddenResponse>> getAllManualBufferAdjustmentLogs(
+            @RequestParam(required = false) String productId,
+            @RequestParam(required = false) String locationId,
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "20") @Min(1) int size,
+            @RequestParam(defaultValue = "adjustmentDate") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortDir) {
+
+        log.info("Fetching manual buffer override logs - productId: {}, locationId: {}, page: {}, size: {}",
+                productId, locationId, page, size);
+
+        try {
+            Sort sort = sortDir.equalsIgnoreCase("desc") ?
+                    Sort.by(sortBy).descending() : Sort.by(sortBy).ascending();
+            Pageable pageable = PageRequest.of(page, size, sort);
+
+            Page<BufferOverriddenResponse> overrides = bufferThresholdCycleService
+                    .getAllManualBufferAdjustmentLogs(productId, locationId, pageable);
+
+            log.info("Successfully fetched {} manual buffer override logs", overrides.getTotalElements());
+            return ResponseEntity.ok(overrides);
+
+        } catch (Exception e) {
+            log.error("Error fetching manual buffer override logs with filters - productId: {}, locationId: {}",
+                    productId, locationId, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
 
     /**
      * GET /api/inventory-buffers

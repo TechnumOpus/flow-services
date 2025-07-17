@@ -24,18 +24,8 @@ public interface BufferAdjustmentLogRepository extends MongoRepository<BufferAdj
     Page<BufferAdjustmentLog> findByApprovedBy(String approvedBy, Pageable pageable);
     
     Page<BufferAdjustmentLog> findByCreatedBy(String createdBy, Pageable pageable);
+    
 
-    @Query("{'systemRecommended': false, 'overriddenAction': {$ne: null}, 'adjustmentType': {$in: ['MANUAL_OVERRIDE', 'THRESHOLD_UPDATE', 'MANUAL_BUFFER_ADJUSTMENT']}}")
-    Page<BufferAdjustmentLog> findManualOverrideLogs(Pageable pageable);
-
-    @Query("{'systemRecommended': false, 'overriddenAction': {$ne: null}, 'adjustmentType': {$in: ['MANUAL_OVERRIDE', 'THRESHOLD_UPDATE', 'MANUAL_BUFFER_ADJUSTMENT']}, 'productId': ?0}")
-    Page<BufferAdjustmentLog> findManualOverrideLogsByProductId(String productId, Pageable pageable);
-
-    @Query("{'systemRecommended': false, 'overriddenAction': {$ne: null}, 'adjustmentType': {$in: ['MANUAL_OVERRIDE', 'THRESHOLD_UPDATE', 'MANUAL_BUFFER_ADJUSTMENT']}, 'locationId': ?0}")
-    Page<BufferAdjustmentLog> findManualOverrideLogsByLocationId(String locationId, Pageable pageable);
-
-    @Query("{'systemRecommended': false, 'overriddenAction': {$ne: null}, 'adjustmentType': {$in: ['MANUAL_OVERRIDE', 'THRESHOLD_UPDATE', 'MANUAL_BUFFER_ADJUSTMENT']}, 'productId': ?0, 'locationId': ?1}")
-    Page<BufferAdjustmentLog> findManualOverrideLogsByProductIdAndLocationId(String productId, String locationId, Pageable pageable);
     // Query-based methods
     @Query("{'approvalStatus': 'PENDING'}")
     Page<BufferAdjustmentLog> findPendingApprovals(Pageable pageable);
