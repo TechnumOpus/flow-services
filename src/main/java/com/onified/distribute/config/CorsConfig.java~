@@ -18,16 +18,14 @@ public class CorsConfig implements WebMvcConfigurer {
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/**")
                 .allowedOriginPatterns(
-                        // Local development
+                        "http://localhost:3000",
+                        "http://127.0.0.1:3000",
                         "http://localhost:*",
-                        "http://127.0.0.1:*",
-                        "https://localhost:*",
-                        // Production domains
                         "https://uat.onified.ai",
                         "https://swagger-flow.onified.ai",
                         "https://api.onified.ai",
-                        "https://onified.ai",
-                        "https://*.onified.ai"
+                        "https://*.onified.ai",
+                        "https://onified.ai"
                 )
                 .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD")
                 .allowedHeaders("*")
@@ -41,16 +39,14 @@ public class CorsConfig implements WebMvcConfigurer {
 
         // Allow specific origins
         configuration.setAllowedOriginPatterns(Arrays.asList(
-                // Local development
+                "http://localhost:3000",
+                "http://127.0.0.1:3000",
                 "http://localhost:*",
-                "http://127.0.0.1:*",
-                "https://localhost:*",
-                // Production domains
                 "https://uat.onified.ai",
                 "https://swagger-flow.onified.ai",
                 "https://api.onified.ai",
-                "https://onified.ai",
-                "https://*.onified.ai"
+                "https://*.onified.ai",
+                "https://onified.ai"
         ));
 
         // Explicitly allow all HTTP methods including PUT and DELETE

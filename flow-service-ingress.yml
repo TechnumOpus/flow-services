@@ -16,11 +16,6 @@ metadata:
     nginx.ingress.kubernetes.io/enable-cors: "true"
     nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
-    # Critical annotations for proper HTTP method handling
-    nginx.ingress.kubernetes.io/proxy-pass-headers: "Host, X-Real-IP, X-Forwarded-For, X-Forwarded-Proto, X-Forwarded-Host, X-Forwarded-Port"
-    nginx.ingress.kubernetes.io/proxy-set-headers: "flow-service/nginx-headers"
-    nginx.ingress.kubernetes.io/upstream-vhost: "api.onified.ai"
-    nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
 spec:
   tls:
     - hosts:
@@ -162,7 +157,7 @@ spec:
                 port:
                   number: 8080
           - pathType: Prefix
-            path: /api/v1/suppliers/
+            path: /api/v1/suppliers
             backend:
               service:
                 name: flow-service
