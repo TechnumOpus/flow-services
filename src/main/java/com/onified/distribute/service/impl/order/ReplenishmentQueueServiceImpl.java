@@ -196,23 +196,19 @@ public class ReplenishmentQueueServiceImpl implements ReplenishmentQueueService 
                 orderDTO.setOrderId(orderId);
                 orderDTO.setProductId(queueItem.getProductId());
                 orderDTO.setLocationId(queueItem.getLocationId());
-                orderDTO.setSupplierLocationId(supplierLocationId);
                 orderDTO.setOrderType(queueItem.getRecommendedAction().equalsIgnoreCase("expedite") ? "EXPEDITE" : "STANDARD");
                 orderDTO.setOrderedQty(calculateOrderedQty(queueItem, buffer));
-                orderDTO.setReceivedQty(0);
-                orderDTO.setPendingQty(orderDTO.getOrderedQty());
+
                 orderDTO.setOrderDate(LocalDateTime.now());
                 orderDTO.setExpectedReceiptDate(
                         queueItem.getLeadTimeDays() != null
                                 ? LocalDateTime.now().plusDays(queueItem.getLeadTimeDays().longValue())
                                 : LocalDateTime.now().plusDays(7));
                 orderDTO.setStatus("DRAFT");
-                orderDTO.setPriority(calculatePriority(queueItem, buffer));
                 orderDTO.setCreatedAt(LocalDateTime.now());
                 orderDTO.setUpdatedAt(LocalDateTime.now());
                 orderDTO.setCreatedBy("SYSTEM");
-                orderDTO.setLastStatusChange(LocalDateTime.now());
-                orderDTO.setLastStatusChangeBy("SYSTEM");
+
 
                 InventoryOrderPipelineDTO createdOrder = inventoryOrderPipelineService.createOrder(orderDTO);
                 log.info("Created order {} for queue item {}", orderId, queueItem.getQueueId());
@@ -370,16 +366,13 @@ public class ReplenishmentQueueServiceImpl implements ReplenishmentQueueService 
                     dto.setOrderId(order.getOrderId());
                     dto.setProductId(order.getProductId());
                     dto.setLocationId(order.getLocationId());
-                    dto.setSupplierLocationId(order.getSupplierLocationId());
                     dto.setOrderType(order.getOrderType());
                     dto.setOrderedQty(order.getOrderedQty());
-                    dto.setReceivedQty(order.getReceivedQty());
-                    dto.setPendingQty(order.getPendingQty());
+
                     dto.setOrderDate(order.getOrderDate());
                     dto.setExpectedReceiptDate(order.getExpectedReceiptDate());
                     dto.setActualReceiptDate(order.getActualReceiptDate());
                     dto.setStatus(order.getStatus());
-                    dto.setPriority(order.getPriority());
                     return dto;
                 });
     }

@@ -154,7 +154,13 @@ public class BufferStatusUpdateScheduler {
 
                 ordersPage.getContent().forEach(order -> {
                     String productId = order.getProductId();
+                    Integer pendingQty = order.getPendingQty() != null ? order.getPendingQty() : 0;
 
+                    if (pendingQty > 0) {
+                        pipelineQuantities.merge(productId, pendingQty, Integer::sum);
+                        log.debug("Added to pipeline - Order: {}, Product: {}, Qty: {}, Total for product: {}",
+                                order.getOrderId(), productId, pendingQty, pipelineQuantities.get(productId));
+                    }
                 });
             } catch (Exception e) {
                 log.error("Error calculating pipeline quantities for status {} at location {}: {}",

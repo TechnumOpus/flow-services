@@ -31,21 +31,12 @@ public class InventoryOrderPipeline {
     @Field("location_id")
     private String locationId;
 
-    @Indexed
-    @Field("supplier_location_id")
-    private String supplierLocationId;
 
     @Field("order_type")
     private String orderType;
 
     @Field("ordered_qty")
     private Integer orderedQty;
-
-    @Field("received_qty")
-    private Integer receivedQty;
-
-    @Field("pending_qty")
-    private Integer pendingQty;
 
     @Field("order_date")
     private LocalDateTime orderDate;
@@ -60,10 +51,9 @@ public class InventoryOrderPipeline {
     private String externalOrderRef;
 
     @Field("supplier_ref")
-    private String supplierRef;
+    private String supplierName;
 
     private String status;
-    private String priority;
 
     @Field("created_at")
     private LocalDateTime createdAt;
@@ -74,10 +64,5 @@ public class InventoryOrderPipeline {
     @Field("created_by")
     private String createdBy;
 
-    @Field("last_status_change")
-    private LocalDateTime lastStatusChange;
-
-    @Field("last_status_change_by")
-    private String lastStatusChangeBy;
 }
 

@@ -83,9 +83,7 @@ public class InventoryOrderPipelineServiceImpl implements InventoryOrderPipeline
             }
 
             order.setStatus("PROCESSED");
-            order.setLastStatusChange(now);
-            order.setLastStatusChangeBy(effectiveUserId);
-            orderRepository.save(order);
+           orderRepository.save(order);
             log.info("Approved order: {}", orderId);
 
             // Optionally update related queue item if linked
@@ -111,9 +109,7 @@ public class InventoryOrderPipelineServiceImpl implements InventoryOrderPipeline
 
         for (InventoryOrderPipeline order : draftOrders) {
             order.setStatus("PROCESSED");
-            order.setLastStatusChange(LocalDateTime.now());
-            order.setLastStatusChangeBy(effectiveUserId);
-            orderRepository.save(order);
+     orderRepository.save(order);
             log.info("Approved order: {}", order.getOrderId());
         }
     }
@@ -159,9 +155,7 @@ public class InventoryOrderPipelineServiceImpl implements InventoryOrderPipeline
         InventoryOrderPipeline order = mapToEntity(orderDTO);
         order.setCreatedAt(LocalDateTime.now());
         order.setUpdatedAt(LocalDateTime.now());
-        order.setLastStatusChange(LocalDateTime.now());
-        order.setLastStatusChangeBy(orderDTO.getCreatedBy() != null ? orderDTO.getCreatedBy() : "SYSTEM");
-        InventoryOrderPipeline savedOrder = orderRepository.save(order);
+      InventoryOrderPipeline savedOrder = orderRepository.save(order);
         return convertToDto(savedOrder);
     }
 
@@ -220,23 +214,19 @@ public class InventoryOrderPipelineServiceImpl implements InventoryOrderPipeline
                 orderDTO.setOrderId(orderId);
                 orderDTO.setProductId(queueItem.getProductId());
                 orderDTO.setLocationId(queueItem.getLocationId());
-                orderDTO.setSupplierLocationId(supplierLocationId);
                 orderDTO.setOrderType(queue.getRecommendedAction().equalsIgnoreCase("EXPEDITE") ? "EXPEDITE" : "STANDARD");
                 orderDTO.setOrderedQty(queueItem.getFinalQuantity() != null ? queueItem.getFinalQuantity() : queue.getRecommendedQty());
-                orderDTO.setReceivedQty(0);
-                orderDTO.setPendingQty(orderDTO.getOrderedQty());
+
                 orderDTO.setOrderDate(LocalDateTime.now());
                 orderDTO.setExpectedReceiptDate(
                         queue.getLeadTimeDays() != null
                                 ? LocalDateTime.now().plusDays(queue.getLeadTimeDays().longValue())
                                 : LocalDateTime.now().plusDays(7));
                 orderDTO.setStatus("DRAFT");
-                orderDTO.setPriority(calculatePriority(queue, buffer));
                 orderDTO.setCreatedAt(LocalDateTime.now());
                 orderDTO.setUpdatedAt(LocalDateTime.now());
                 orderDTO.setCreatedBy(effectiveUserId);
-                orderDTO.setLastStatusChange(LocalDateTime.now());
-                orderDTO.setLastStatusChangeBy(effectiveUserId);
+
 
                 InventoryOrderPipelineDTO createdOrder = createOrder(orderDTO);
                 log.info("Created order {} for queue item {}", orderId, queueItem.getQueueId());
@@ -274,8 +264,6 @@ public class InventoryOrderPipelineServiceImpl implements InventoryOrderPipeline
 
         updateEntityFromDto(orderDTO, existingOrder);
         existingOrder.setUpdatedAt(LocalDateTime.now());
-        existingOrder.setLastStatusChange(LocalDateTime.now());
-        existingOrder.setLastStatusChangeBy(orderDTO.getLastStatusChangeBy() != null ? orderDTO.getLastStatusChangeBy() : "SYSTEM");
 
         InventoryOrderPipeline savedOrder = orderRepository.save(existingOrder);
         return convertToDto(savedOrder);
@@ -290,17 +278,12 @@ public class InventoryOrderPipelineServiceImpl implements InventoryOrderPipeline
             throw new ResourceNotFoundException("Order not found with ID: " + orderId);
         }
 
-        if (receivedQty != null) {
-            order.setReceivedQty(receivedQty);
-            order.setPendingQty(order.getOrderedQty() - receivedQty);
-        }
+
         if (actualReceiptDate != null) {
             order.setActualReceiptDate(actualReceiptDate);
         }
         order.setStatus("RECEIVED");
         order.setUpdatedAt(LocalDateTime.now());
-        order.setLastStatusChange(LocalDateTime.now());
-        order.setLastStatusChangeBy("SYSTEM");
 
         InventoryOrderPipeline savedOrder = orderRepository.save(order);
         return convertToDto(savedOrder);
@@ -345,23 +328,19 @@ public class InventoryOrderPipelineServiceImpl implements InventoryOrderPipeline
         dto.setOrderId(order.getOrderId());
         dto.setProductId(order.getProductId());
         dto.setLocationId(order.getLocationId());
-        dto.setSupplierLocationId(order.getSupplierLocationId());
         dto.setOrderType(order.getOrderType());
         dto.setOrderedQty(order.getOrderedQty());
-        dto.setReceivedQty(order.getReceivedQty());
-        dto.setPendingQty(order.getPendingQty());
+
         dto.setOrderDate(order.getOrderDate());
         dto.setExpectedReceiptDate(order.getExpectedReceiptDate());
         dto.setActualReceiptDate(order.getActualReceiptDate());
         dto.setExternalOrderRef(order.getExternalOrderRef());
-        dto.setSupplierRef(order.getSupplierRef());
+        dto.setSupplierName(order.getSupplierName());
         dto.setStatus(order.getStatus());
-        dto.setPriority(order.getPriority());
         dto.setCreatedAt(order.getCreatedAt());
         dto.setUpdatedAt(order.getUpdatedAt());
         dto.setCreatedBy(order.getCreatedBy());
-        dto.setLastStatusChange(order.getLastStatusChange());
-        dto.setLastStatusChangeBy(order.getLastStatusChangeBy());
+
         return dto;
     }
 
@@ -370,61 +349,29 @@ public class InventoryOrderPipelineServiceImpl implements InventoryOrderPipeline
         order.setOrderId(dto.getOrderId());
         order.setProductId(dto.getProductId());
         order.setLocationId(dto.getLocationId());
-        order.setSupplierLocationId(dto.getSupplierLocationId());
         order.setOrderType(dto.getOrderType());
         order.setOrderedQty(dto.getOrderedQty());
-        order.setReceivedQty(dto.getReceivedQty());
-        order.setPendingQty(dto.getPendingQty());
+
         order.setOrderDate(dto.getOrderDate());
         order.setExpectedReceiptDate(dto.getExpectedReceiptDate());
         order.setActualReceiptDate(dto.getActualReceiptDate());
         order.setExternalOrderRef(dto.getExternalOrderRef());
-        order.setSupplierRef(dto.getSupplierRef());
+        order.setSupplierName(dto.getSupplierName());
         order.setStatus(dto.getStatus());
-        order.setPriority(dto.getPriority());
         order.setCreatedBy(dto.getCreatedBy());
-        order.setLastStatusChangeBy(dto.getLastStatusChangeBy());
         return order;
     }
 
     private void updateEntityFromDto(InventoryOrderPipelineDTO dto, InventoryOrderPipeline order) {
         order.setProductId(dto.getProductId());
         order.setLocationId(dto.getLocationId());
-        order.setSupplierLocationId(dto.getSupplierLocationId());
         order.setOrderType(dto.getOrderType());
         order.setOrderedQty(dto.getOrderedQty());
-        order.setReceivedQty(dto.getReceivedQty());
-        order.setPendingQty(dto.getPendingQty());
+        order.setSupplierName(dto.getSupplierName());
         order.setOrderDate(dto.getOrderDate());
         order.setExpectedReceiptDate(dto.getExpectedReceiptDate());
         order.setActualReceiptDate(dto.getActualReceiptDate());
         order.setExternalOrderRef(dto.getExternalOrderRef());
-        order.setSupplierRef(dto.getSupplierRef());
         order.setStatus(dto.getStatus());
-        order.setPriority(dto.getPriority());
-        order.setLastStatusChangeBy(dto.getLastStatusChangeBy());
-    }
-
-    private String calculatePriority(ReplenishmentQueue queueItem, InventoryBuffer buffer) {
-        double zoneWeight = switch (buffer.getCurrentZone().toLowerCase()) {
-            case "red", "critical" -> 100.0;
-            case "yellow" -> 50.0;
-            case "green" -> 10.0;
-            default -> 10.0;
-        };
-        LocalDateTime thirtyDaysAgo = LocalDateTime.now().minusDays(30);
-        long orderCount = orderRepository
-                .findByLocationId(queueItem.getLocationId(), Pageable.unpaged())
-                .getContent().stream()
-                .filter(order -> order.getOrderDate() != null && order.getOrderDate().isAfter(thirtyDaysAgo))
-                .count();
-        double frequencyWeight = orderCount * 5.0;
-        double priorityScore = zoneWeight + frequencyWeight;
-        return switch ((int) (priorityScore / 50)) {
-            case 0 -> "LOW";
-            case 1 -> "MEDIUM";
-            case 2 -> "HIGH";
-            default -> "CRITICAL";
-        };
     }
 }

@@ -135,7 +135,7 @@ public class InventoryOrderPipelineServiceImpl implements InventoryOrderPipeline
             if (locationId != null && !locationId.isEmpty()) {
                 orders = orderRepository.findByStatusAndLocationId(status, locationId, pageable);
             } else {
-                orders = orderRepository.findByStatus(status, pageable);
+                orders = orderRepository.findByStatusNot(status, pageable);
             }
         } else {
             // If no specific status, get all except DRAFT
@@ -231,7 +231,6 @@ public class InventoryOrderPipelineServiceImpl implements InventoryOrderPipeline
                                 ? LocalDateTime.now().plusDays(queue.getLeadTimeDays().longValue())
                                 : LocalDateTime.now().plusDays(7));
                 orderDTO.setStatus("DRAFT");
-                orderDTO.setPriority(calculatePriority(queue, buffer));
                 orderDTO.setCreatedAt(LocalDateTime.now());
                 orderDTO.setUpdatedAt(LocalDateTime.now());
                 orderDTO.setCreatedBy(effectiveUserId);
@@ -356,7 +355,6 @@ public class InventoryOrderPipelineServiceImpl implements InventoryOrderPipeline
         dto.setExternalOrderRef(order.getExternalOrderRef());
         dto.setSupplierRef(order.getSupplierRef());
         dto.setStatus(order.getStatus());
-        dto.setPriority(order.getPriority());
         dto.setCreatedAt(order.getCreatedAt());
         dto.setUpdatedAt(order.getUpdatedAt());
         dto.setCreatedBy(order.getCreatedBy());
@@ -381,7 +379,6 @@ public class InventoryOrderPipelineServiceImpl implements InventoryOrderPipeline
         order.setExternalOrderRef(dto.getExternalOrderRef());
         order.setSupplierRef(dto.getSupplierRef());
         order.setStatus(dto.getStatus());
-        order.setPriority(dto.getPriority());
         order.setCreatedBy(dto.getCreatedBy());
         order.setLastStatusChangeBy(dto.getLastStatusChangeBy());
         return order;
@@ -401,30 +398,6 @@ public class InventoryOrderPipelineServiceImpl implements InventoryOrderPipeline
         order.setExternalOrderRef(dto.getExternalOrderRef());
         order.setSupplierRef(dto.getSupplierRef());
         order.setStatus(dto.getStatus());
-        order.setPriority(dto.getPriority());
         order.setLastStatusChangeBy(dto.getLastStatusChangeBy());
-    }
-
-    private String calculatePriority(ReplenishmentQueue queueItem, InventoryBuffer buffer) {
-        double zoneWeight = switch (buffer.getCurrentZone().toLowerCase()) {
-            case "red", "critical" -> 100.0;
-            case "yellow" -> 50.0;
-            case "green" -> 10.0;
-            default -> 10.0;
-        };
-        LocalDateTime thirtyDaysAgo = LocalDateTime.now().minusDays(30);
-        long orderCount = orderRepository
-                .findByLocationId(queueItem.getLocationId(), Pageable.unpaged())
-                .getContent().stream()
-                .filter(order -> order.getOrderDate() != null && order.getOrderDate().isAfter(thirtyDaysAgo))
-                .count();
-        double frequencyWeight = orderCount * 5.0;
-        double priorityScore = zoneWeight + frequencyWeight;
-        return switch ((int) (priorityScore / 50)) {
-            case 0 -> "LOW";
-            case 1 -> "MEDIUM";
-            case 2 -> "HIGH";
-            default -> "CRITICAL";
-        };
     }
 }
