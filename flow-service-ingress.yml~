@@ -16,16 +16,12 @@ metadata:
     nginx.ingress.kubernetes.io/enable-cors: "true"
     nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
-    # Add these new annotations
-    nginx.ingress.kubernetes.io/proxy-method: "GET, POST, PUT, PATCH, DELETE, OPTIONS"
-    nginx.ingress.kubernetes.io/proxy-pass-headers: "Content-Type, Authorization"
-    nginx.ingress.kubernetes.io/upstream-hash-by: "$request_uri"
 spec:
   tls:
-    - hosts:
-        - swagger-flow.onified.ai
-        - api.onified.ai
-      secretName: flow-service-tls
+  - hosts:
+    - swagger-flow.onified.ai
+    - api.onified.ai
+    secretName: flow-service-tls
   ingressClassName: nginx
   rules:
     - host: swagger-flow.onified.ai
@@ -77,7 +73,7 @@ spec:
                 port:
                   number: 8080
           - pathType: Prefix
-            path: /api/v1/lead-times
+            path: /api/v1/lead-times  
             backend:
               service:
                 name: flow-service
@@ -112,7 +108,7 @@ spec:
                 port:
                   number: 8080
           - pathType: Prefix
-            path: /api/v1/buffer-calculation
+            path: /api/v1/buffer-calculation  
             backend:
               service:
                 name: flow-service

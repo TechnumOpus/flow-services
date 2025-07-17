@@ -20,8 +20,9 @@ public class CorsConfig implements WebMvcConfigurer {
                 .allowedOriginPatterns(
                         "http://localhost:3000",
                         "http://127.0.0.1:3000",
-                        "https://your-frontend-domain.com", // Replace with your actual deployed frontend domain
-                        "https://*.your-frontend-domain.com" // For subdomains if needed
+                        "https://uat.onified.ai",
+                        "https://swagger-flow.onified.ai",
+                        "https://api.onified.ai"
                 )
                 .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD")
                 .allowedHeaders("*")
@@ -38,10 +39,11 @@ public class CorsConfig implements WebMvcConfigurer {
                 "http://localhost:3000",
                 "http://127.0.0.1:3000",
                 "https://uat.onified.ai",
-                "https://swagger-flow.onified.ai"
+                "https://swagger-flow.onified.ai",
+                "https://api.onified.ai"
         ));
 
-        // Allow all HTTP methods
+        // Explicitly allow all HTTP methods including PUT and DELETE
         configuration.setAllowedMethods(Arrays.asList(
                 "GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"
         ));
