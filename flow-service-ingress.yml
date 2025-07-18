@@ -12,19 +12,16 @@ metadata:
     nginx.ingress.kubernetes.io/cors-allow-credentials: "true"
     nginx.ingress.kubernetes.io/cors-allow-headers: "Authorization, Content-Type, Accept, Origin"
     nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, PUT, PATCH, DELETE, OPTIONS"
-    nginx.ingress.kubernetes.io/cors-allow-origin: "https://uat.onified.ai, http://localhost:3000"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "https://uat.onified.ai"
     nginx.ingress.kubernetes.io/enable-cors: "true"
     nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
-    nginx.ingress.kubernetes.io/proxy-method: "*"
-    nginx.ingress.kubernetes.io/rewrite-target: /$1
-    nginx.ingress.kubernetes.io/use-regex: "true"
 spec:
   tls:
-    - hosts:
-        - swagger-flow.onified.ai
-        - api.onified.ai
-      secretName: flow-service-tls
+  - hosts:
+    - swagger-flow.onified.ai
+    - api.onified.ai
+    secretName: flow-service-tls
   ingressClassName: nginx
   rules:
     - host: swagger-flow.onified.ai
@@ -76,7 +73,7 @@ spec:
                 port:
                   number: 8080
           - pathType: Prefix
-            path: /api/v1/lead-times
+            path: /api/v1/lead-times  
             backend:
               service:
                 name: flow-service
@@ -111,7 +108,7 @@ spec:
                 port:
                   number: 8080
           - pathType: Prefix
-            path: /api/v1/buffer-calculation
+            path: /api/v1/buffer-calculation  
             backend:
               service:
                 name: flow-service
@@ -166,10 +163,4 @@ spec:
                 name: flow-service
                 port:
                   number: 8080
-          - pathType: Prefix
-            path: /api/v1/stock-adjustments
-            backend:
-              service:
-                name: flow-service
-                port:
-                  number: 8080
+
