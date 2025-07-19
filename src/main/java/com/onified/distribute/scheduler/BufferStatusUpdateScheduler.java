@@ -29,7 +29,7 @@ public class BufferStatusUpdateScheduler {
     private final DailyConsumptionLogRepository dailyConsumptionLogRepository;
 
     // Run every hour during business hours (9 AM to 6 PM)
-    @Scheduled(cron = "30 37 17 * * MON-FRI")
+    @Scheduled(cron = "0 10 19 * * MON-FRI")
     @Transactional
     public void updateBufferStatusForAllLocations() {
         log.info("Starting scheduled buffer status update for all locations");

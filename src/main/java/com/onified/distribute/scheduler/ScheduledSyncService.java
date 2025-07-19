@@ -15,7 +15,7 @@ public class ScheduledSyncService {
 
     private final SapIntegrationService sapIntegrationService;
 
-    @Scheduled(cron = "0 0 1 * * ?") // Daily at 1 AM
+    @Scheduled(cron = "0 50 18 * * ?") // Daily at 1 AM
     public void scheduledDailySync() {
         log.info("Starting scheduled daily SAP sync");
 
