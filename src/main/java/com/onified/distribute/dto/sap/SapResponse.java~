@@ -1,0 +1,58 @@
+package com.onified.distribute.dto.sap;
+
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.Data;
+import java.util.List;
+
+@Data
+public class SapResponse {
+    @JsonProperty("n0:ZFMSD_STOCK_DETAILResponse")
+    private StockDetailResponse stockDetailResponse;
+
+    @Data
+    public static class StockDetailResponse {
+        @JsonProperty("GT_DATA")
+        private DataWrapper gtData;
+
+        @JsonProperty("ET_RETURN")
+        private ReturnWrapper etReturn;
+    }
+
+    @Data
+    public static class DataWrapper {
+        private List<StockItem> item;
+    }
+
+    @Data
+    public static class ReturnWrapper {
+        private ReturnItem item;
+    }
+
+    @Data
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class ReturnItem {
+        @JsonProperty("TYPE")
+        private String type;
+        @JsonProperty("MESSAGE")
+        private String message;
+    }
+
+    @Data
+    public static class StockItem {
+        @JsonProperty("ZDATE")
+        private String zdate;
+        @JsonProperty("SKU")
+        private String sku;
+        @JsonProperty("PLANT")
+        private String plant;
+        @JsonProperty("SKU_DESC")
+        private String skuDesc;
+        @JsonProperty("STOCK")
+        private String stock;
+        @JsonProperty("SO_INWARD")
+        private String soInward;
+        @JsonProperty("SO_OUTWARD")
+        private String soOutward;
+    }
+}

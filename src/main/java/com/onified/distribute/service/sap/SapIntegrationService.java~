@@ -1,0 +1,282 @@
+package com.onified.distribute.service.sap;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.onified.distribute.dto.sap.SapResponse;
+import com.onified.distribute.entity.DailyConsumptionLog;
+import com.onified.distribute.repository.DailyConsumptionLogRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.*;
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Retryable;
+import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriComponentsBuilder;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Collections;
+import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class SapIntegrationService {
+
+    private final RestTemplate restTemplate;
+    private final ObjectMapper objectMapper;
+    private final DailyConsumptionLogRepository consumptionLogRepository;
+    private final Map<String, String> productLocationMapping;
+
+    @Value("${sap.api.url:https://l550274-iflmap.hcisbp.ae1.hana.ondemand.com/http/Towel_StockDetail}")
+    private String sapApiUrl;
+
+    @Value("${sap.api.authorization:Basic dmluYXluYW5kYUB0cmlkZW50aW5kaWEuY29tOkNvbUAxNTY3ODk=}")
+    private String authorization;
+
+    public void syncDailyConsumptionData(LocalDate startDate, LocalDate endDate) {
+        validateDateRange(startDate, endDate);
+        log.info("Starting SAP sync for date range: {} to {}", startDate, endDate);
+
+        productLocationMapping.forEach((location, sku) -> {
+            try {
+                log.info("Syncing data for location: {} and SKU: {}", location, sku);
+                fetchAndSaveConsumptionData(location, sku, startDate, endDate);
+            } catch (Exception e) {
+                log.error("Error syncing data for location: {} and SKU: {}", location, sku, e);
+                // Continue with other locations instead of failing completely
+            }
+        });
+
+        log.info("SAP sync completed for date range: {} to {}", startDate, endDate);
+    }
+
+    @Retryable(value = RestClientException.class, maxAttempts = 3, backoff = @Backoff(delay = 2000, multiplier = 2))
+    private void fetchAndSaveConsumptionData(String location, String sku, LocalDate startDate, LocalDate endDate) {
+        try {
+            // Try different approaches based on SAP API requirements
+
+            // Approach 1: POST with XML body (most common for SAP)
+            ResponseEntity<String> response = callSapApiWithPost(location, sku, startDate, endDate);
+
+            if (response.getStatusCode() != HttpStatus.OK) {
+                log.warn("POST request failed with status: {}, trying GET with query params", response.getStatusCode());
+                // Approach 2: GET with query parameters
+                response = callSapApiWithGet(location, sku, startDate, endDate);
+            }
+
+            if (response.getStatusCode() == HttpStatus.OK) {
+                processResponse(response.getBody(), location, sku);
+            } else {
+                log.error("SAP API returned error status: {} for location: {}, SKU: {}. Response body: {}",
+                        response.getStatusCode(), location, sku, response.getBody());
+                throw new RuntimeException("SAP API call failed with status: " + response.getStatusCode());
+            }
+
+        } catch (RestClientException e) {
+            log.error("Error fetching data from SAP API for location: {} and SKU: {}", location, sku, e);
+            throw e;
+        }
+    }
+
+    private ResponseEntity<String> callSapApiWithPost(String location, String sku, LocalDate startDate, LocalDate endDate) {
+        String xmlBody = buildXmlRequest(location, sku, startDate, endDate);
+        log.info("Making POST API call to SAP with URL: {}, Body: {}", sapApiUrl, xmlBody);
+
+        HttpHeaders headers = createHeaders();
+        HttpEntity<String> request = new HttpEntity<>(xmlBody, headers);
+
+        return restTemplate.exchange(sapApiUrl, HttpMethod.POST, request, String.class);
+    }
+
+    private ResponseEntity<String> callSapApiWithGet(String location, String sku, LocalDate startDate, LocalDate endDate) {
+        String formattedStartDate = startDate.format(DateTimeFormatter.ofPattern("dd-MM-yyyy"));
+        String formattedEndDate = endDate.format(DateTimeFormatter.ofPattern("dd-MM-yyyy"));
+
+        String url = UriComponentsBuilder.fromUriString(sapApiUrl)
+                .queryParam("IV_CUSTOMER", "")
+                .queryParam("IV_FDATE", formattedStartDate)
+                .queryParam("IV_PLANT", location)
+                .queryParam("IV_SKU", sku)
+                .queryParam("IV_TDATE", formattedEndDate)
+                .toUriString();
+
+        log.info("Making GET API call to SAP with URL: {}", url);
+
+        HttpHeaders headers = createGetHeaders();
+        HttpEntity<String> request = new HttpEntity<>(headers);
+
+        return restTemplate.exchange(url, HttpMethod.GET, request, String.class);
+    }
+
+    private String buildXmlRequest(String location, String sku, LocalDate startDate, LocalDate endDate) {
+        String formattedStartDate = startDate.format(DateTimeFormatter.ofPattern("dd-MM-yyyy"));
+        String formattedEndDate = endDate.format(DateTimeFormatter.ofPattern("dd-MM-yyyy"));
+
+        // Use proper XML structure
+        String xml = String.format(
+                "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
+                        "<soapenv:Envelope xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\">" +
+                        "<soapenv:Header/>" +
+                        "<soapenv:Body>" +
+                        "<temp>" +
+                        "<IV_CUSTOMER></IV_CUSTOMER>" +
+                        "<IV_FDATE>%s</IV_FDATE>" +
+                        "<IV_PLANT>%s</IV_PLANT>" +
+                        "<IV_SKU>%s</IV_SKU>" +
+                        "<IV_TDATE>%s</IV_TDATE>" +
+                        "</temp>" +
+                        "</soapenv:Body>" +
+                        "</soapenv:Envelope>",
+                formattedStartDate, location, sku, formattedEndDate);
+
+        return xml.replaceAll("\\n\\s*", "");
+    }
+
+    private HttpHeaders createHeaders() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_XML);
+        headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
+        headers.set("Authorization", authorization);
+
+        headers.set("SOAPAction", "");
+        headers.set("Cache-Control", "no-cache");
+
+        return headers;
+    }
+
+    private HttpHeaders createGetHeaders() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
+        headers.set("Authorization", authorization);
+        headers.set("Cache-Control", "no-cache");
+
+        return headers;
+    }
+
+    private void processResponse(String responseBody, String location, String sku) {
+        try {
+            log.debug("Processing SAP response for location: {}, SKU: {}, Response: {}", location, sku, responseBody);
+            SapResponse sapResponse = objectMapper.readValue(responseBody, SapResponse.class);
+
+            // Check if SAP returned any errors
+            if (sapResponse.getStockDetailResponse() != null &&
+                    sapResponse.getStockDetailResponse().getEtReturn() != null &&
+                    sapResponse.getStockDetailResponse().getEtReturn().getItem() != null) {
+
+                SapResponse.ReturnItem returnItem = sapResponse.getStockDetailResponse().getEtReturn().getItem();
+
+                // Check if there's an error message
+                if (returnItem.getMessage() != null && !returnItem.getMessage().isEmpty()) {
+                    log.warn("SAP returned message for location: {}, SKU: {}, Message: {}",
+                            location, sku, returnItem.getMessage());
+                }
+
+                // Check if it's an error type
+                if ("E".equals(returnItem.getType())) {
+                    log.error("SAP returned error for location: {}, SKU: {}, Error: {}",
+                            location, sku, returnItem.getMessage());
+                    return; // Don't process data if there's an error
+                }
+            }
+
+            // Process the actual data
+            if (sapResponse.getStockDetailResponse() != null &&
+                    sapResponse.getStockDetailResponse().getGtData() != null &&
+                    sapResponse.getStockDetailResponse().getGtData().getItem() != null) {
+
+                sapResponse.getStockDetailResponse().getGtData().getItem().forEach(item -> {
+                    if (isValidItem(item)) {
+                        saveDailyConsumptionLog(item, location, sku);
+                    }
+                });
+            } else {
+                log.warn("No valid stock data found in SAP response for location: {}, SKU: {}", location, sku);
+            }
+        } catch (Exception e) {
+            log.error("Error processing SAP response for location: {}, SKU: {}", location, sku, e);
+            // Log the raw response for debugging
+            log.debug("Raw SAP response body: {}", responseBody);
+        }
+    }
+
+    private boolean isValidItem(SapResponse.StockItem item) {
+        return item.getZdate() != null &&
+                !item.getZdate().equals("0000-00-00") &&
+                !item.getZdate().isEmpty() &&
+                item.getSku() != null &&
+                !item.getSku().isEmpty();
+    }
+
+    private void saveDailyConsumptionLog(SapResponse.StockItem item, String location, String sku) {
+        try {
+            DailyConsumptionLog consumptionLog = new DailyConsumptionLog();
+            consumptionLog.setProductId(item.getSku());
+            consumptionLog.setLocationId(location);
+            consumptionLog.setConsumptionDate(parseDate(item.getZdate()));
+            consumptionLog.setQuantityConsumed(parseQuantityFromSoOutward(item.getSoOutward()));
+            consumptionLog.setTransactionType("SAP_SYNC");
+            consumptionLog.setSourceSystem("SAP");
+            consumptionLog.setCreatedAt(LocalDateTime.now());
+            consumptionLog.setCreatedBy("SYSTEM");
+
+            if (!consumptionLogRepository.existsByProductIdAndLocationIdAndConsumptionDate(
+                    consumptionLog.getProductId(), consumptionLog.getLocationId(), consumptionLog.getConsumptionDate())) {
+
+                consumptionLogRepository.save(consumptionLog);
+                log.info("Saved consumption log for product: {}, location: {}, date: {}",
+                        consumptionLog.getProductId(), consumptionLog.getLocationId(), consumptionLog.getConsumptionDate());
+            } else {
+                log.info("Record already exists, skipping save for product: {}, location: {}, date: {}",
+                        consumptionLog.getProductId(), consumptionLog.getLocationId(), consumptionLog.getConsumptionDate());
+            }
+
+        } catch (Exception e) {
+            log.error("Error saving consumption log for product: {}, location: {}, date: {}",
+                    item.getSku(), location, item.getZdate(), e);
+        }
+    }
+
+    private LocalDateTime parseDate(String dateStr) {
+        try {
+            LocalDate date = LocalDate.parse(dateStr, DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+            return date.atStartOfDay();
+        } catch (Exception e) {
+            log.error("Error parsing date: {}", dateStr, e);
+            return LocalDateTime.now();
+        }
+    }
+
+    private Integer parseQuantityFromSoOutward(String soOutward) {
+        if (soOutward == null || soOutward.isEmpty()) {
+            return 0;
+        }
+
+        try {
+            Pattern pattern = Pattern.compile("Total-([0-9]+\\.?[0-9]*)");
+            Matcher matcher = pattern.matcher(soOutward);
+
+            if (matcher.find()) {
+                return (int) Double.parseDouble(matcher.group(1));
+            }
+        } catch (Exception e) {
+            log.error("Error parsing SO_OUTWARD: {}", soOutward, e);
+        }
+
+        return 0;
+    }
+
+    private void validateDateRange(LocalDate startDate, LocalDate endDate) {
+        if (startDate.isAfter(endDate)) {
+            throw new IllegalArgumentException("Start date cannot be after end date");
+        }
+        if (startDate.isAfter(LocalDate.now())) {
+            throw new IllegalArgumentException("Start date cannot be in the future");
+        }
+    }
+}

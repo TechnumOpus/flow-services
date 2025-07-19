@@ -1,0 +1,20 @@
+package com.onified.distribute.config;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import java.util.Map;
+import java.util.HashMap;
+
+@Configuration
+public class ProductLocationMappingConfig {
+
+    @Bean
+    public Map<String, String> productLocationMapping() {
+        Map<String, String> mapping = new HashMap<>();
+        mapping.put("THT1 - Raw Material WH", "TYG012CWBC4");
+        mapping.put("THT1 - Packing Material WH", "PK31608002334");
+        mapping.put("THT1 - Greigh Folding WH", "TGBSPTDPDNSUSGNZ06928");
+        mapping.put("THT1 - FG WH", "TFBSPTDPDNSUSGNZ06928F0901375");
+        return mapping;
+    }
+}

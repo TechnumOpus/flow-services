@@ -3,7 +3,7 @@ package com.onified.distribute.controller;
 import com.onified.distribute.dto.LeadTimeDTO;
 import com.onified.distribute.dto.response.LeadTimeResponseDTO;
 import com.onified.distribute.dto.request.LeadTimeUpdateDTO;
-import com.onified.distribute.service.LeadTimeService;
+import com.onified.distribute.service.masterdata.LeadTimeService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -12,6 +12,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import com.onified.distribute.dto.request.BulkLeadTimeRequestDTO;
 
 import jakarta.validation.Valid;
 import java.util.List;
@@ -136,7 +137,7 @@ public class LeadTimeController {
     @GetMapping
     public ResponseEntity<Page<LeadTimeDTO>> getAllLeadTimes(Pageable pageable) {
         log.info("Fetching all lead times with pagination");
-        Page<LeadTimeDTO> leadTimes = leadTimeService.getAllLeadTimes(pageable);
+        Page<LeadTimeDTO> leadTimes = leadTimeService.getActiveLeadTimes(pageable);
         return ResponseEntity.ok(leadTimes);
     }
 

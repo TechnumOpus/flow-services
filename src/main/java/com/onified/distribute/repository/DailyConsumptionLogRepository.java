@@ -130,9 +130,6 @@ public interface DailyConsumptionLogRepository extends MongoRepository<DailyCons
     @Query(value = "{ 'productId': ?0, 'locationId': ?1 }", sort = "{ 'consumptionDate': -1, '_id': -1 }")
     Optional<DailyConsumptionLog> findLatestConsumptionByProductAndLocation(String productId, String locationId);
 
-    // Check if consumption exists for specific date
-    boolean existsByProductIdAndLocationIdAndConsumptionDate(String productId, String locationId, LocalDateTime consumptionDate);
-
     // Delete old consumption logs
     void deleteByConsumptionDateBefore(LocalDateTime cutoffDate);
 
@@ -143,6 +140,9 @@ public interface DailyConsumptionLogRepository extends MongoRepository<DailyCons
             String locationId,
             Pageable pageable
     );
+
+    boolean existsByProductIdAndLocationIdAndConsumptionDate(
+            String productId, String locationId, LocalDateTime consumptionDate);
 
     @Query("{'productId': ?0, 'locationId': ?1, 'consumptionDate': {$gte: ?2, $lte: ?3}}")
     List<DailyConsumptionLog> findConsumptionForPeriod(String productId, String locationId,

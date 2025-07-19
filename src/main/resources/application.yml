@@ -13,17 +13,10 @@ spring:
   cloud:
     compatibility-verifier:
       enabled: false
-#  mvc:
-#    # Disable static resource handling for API paths
-#    static-path-pattern: /static/**
-#    # Ensure proper path matching
-#    pathmatch:
-#      matching-strategy: ant_path_matcher
-#    web:
-#      resources:
-#        # Only serve static resources from specific paths
-#        static-locations: classpath:/static/
-#        add-mappings: false  # Disable default static resource mappings
+sap:
+  api:
+    url: https://l550274-iflmap.hcisbp.ae1.hana.ondemand.com/http/Towel_StockDetail
+    authorization: Basic dmluYXluYW5kYUB0cmlkZW50aW5kaWEuY29tOkNvbUAxNTY3ODk=
 
   server:
     # Ensure proper forwarded headers handling
